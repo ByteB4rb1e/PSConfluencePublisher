@@ -108,12 +108,12 @@ Describe 'Set-Manifest' `
 
                 Mock Copy-Item {
                     #FIXME: the scope is completely wrong
-                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1
+                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1 `
 
-                    $args[1] | Should -Be 'foobar.x'
+                    $Path | Should -Be 'foobar.x'
 
-                    $args[3] | Should -Be 'foobar.x.bck'
-                }
+                    $Destination | Should -Be 'foobar.x.bck'
+                } 
 
                  #mocking Get-Content, therefore file name can be bogus
                  Set-Manifest `
@@ -139,11 +139,11 @@ Describe 'Set-Manifest' `
 
                 Mock Copy-Item {
                     #FIXME: the scope is completely wrong
-                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1
+                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1 `
 
-                    $args[1] | Should -Be 'foo/bar/foobar.x'
+                    $Path | Should -Be 'foo/bar/foobar.x'
 
-                    $args[3] | Should -Be 'foo/bar/foobar.x.bck'
+                    $Destination | Should -Be 'foo/bar/foobar.x.bck'
                 }
 
                  #mocking Get-Content, therefore file name can be bogus

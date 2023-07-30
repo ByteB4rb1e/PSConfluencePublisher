@@ -68,8 +68,22 @@ function Set-Manifest
 
         if ($Backup)
         {
-            #FIXME: this always assumes the current working directory
-            Copy-Item -Path $File -Destination "$(Split-Path -Leaf $File).bck"
+            $baseDir = Split-Path $File
+
+            $baseName = "$(Split-Path -Leaf $File).bck"
+
+            #FIXME: this should be handled without an explicit condition
+            if ($baseDir)
+            {
+                $path = Join-Path $baseDir $baseName
+            }
+
+            else
+            {
+                $path = $baseName
+            }
+
+            Copy-Item -Path $File -Destination $path
         }
 
         Set-Content -Path $File -Value $raw
