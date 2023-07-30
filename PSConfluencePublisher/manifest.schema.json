@@ -1,0 +1,93 @@
+{
+	"$id": "https://spec.victory-k.it/psconfluencepublisher.json",
+    "x-authors": [
+        "theodor.rodweil@victory-k.it"
+    ],
+    "type": "object",
+    "properties": {
+        "pages": {
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "$ref": "#/definitions/page"
+                }
+            }
+        },
+        "attachments": {
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "$ref": "#/definitions/attachment"
+                }
+            }
+        }
+    },
+    "required": [
+        "pages",
+        "attachments"
+    ],
+    "definitions": {
+        "page": {
+            "type": "object",
+            "description": "Local Confluence page/container attachment metadata",
+            "properties": {
+                "PageId": {
+                    "type": "string",
+                    "description": "Id of attachment defined by Confluence instance. The id is generated after the publishing of a page."
+                },
+                "Version": {
+                    "type": "string"
+                },
+                "Hash": {
+                    "type": "string",
+                    "description": "SHA512 hexadecimal content hash value"
+                },
+                "Ref": {
+                    "type": "string",
+                    "description": "Local filesystem reference/path"
+                },
+                "AncestorTitle": {
+                    "type": "string",
+                    "description": "Title of Confluence page this page is a child of. The title must be a property key of the pages object."
+                }
+            },
+            "required": [
+                "Hash",
+                "Ref"
+            ]
+        },
+        "attachment": {
+            "type": "object",
+            "description": "Local Confluence page/container attachment metadata",
+            "properties": {
+                "AttachmentId": {
+                    "type": "string",
+                    "description": "Id of attachment defined by Confluence instance. The id is generated after the publishing of an attachment."
+                },
+                "Hash": {
+                    "type": "string",
+                    "description": "SHA512 hexadecimal attachment content hash value"
+                },
+                "MimeType": {
+                    "type": "string",
+                    "description": "MIME type of attachment",
+                    "default": "binary/octet-stream"
+                },
+                "ContainerPageTitle": {
+                    "type": "string",
+                    "description": "Title of Confluence page this attachment is contained in. The title must be a property key of the pages object."
+                },
+                "Ref": {
+                    "type": "string",
+                    "description": "Local filesystem reference/path"
+                }
+            },
+            "required": [
+                "Hash",
+                "MimeType",
+                "ContainerPageTitle",
+                "Ref"
+            ]
+        }
+    }
+}

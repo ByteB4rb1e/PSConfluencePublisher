@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>ConfluencePublisher</id>
+        <version>1.1.0</version>
+        <description>Übergangslösung für die Integration von sphinx-confluencebuilder generierter Confluence Dokumentation</description>
+        <authors>tiara.rodney@adesso.de</authors>
+        <owners>irina.ternovykh@vkb.de</owners>
+        <license type="expression">UNLICENSED</license>
+        <readme>README.md</readme>
+        <copyright>VKBit Betrieb GmbH</copyright>
+        <title>Powershell Confluence Publisher</title>
+    </metadata>
+</package>
