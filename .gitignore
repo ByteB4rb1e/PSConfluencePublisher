@@ -1,3 +1,7 @@
 /_*
 /._*
 .DS_Store
+
+#vim cache
+*.swp
+*.swo
