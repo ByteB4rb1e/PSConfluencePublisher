@@ -59,9 +59,9 @@ Describe 'Set-Manifest' `
                  Mock Set-Content {
                     Should -Invoke -CommandName 'Set-Content' -Exactly -Times 1
 
-                    $args[1] | Should -Be 'foobar.x'
+                    $Path | Should -Be 'foobar.x'
 
-                    $args[3] | Should -Be ($mockManifest | ConvertTo-JSON)
+                    $Value | Should -Be ($mockManifest | ConvertTo-JSON)
                  }
 
                  #mocking Get-Content, therefore file name can be bogus
