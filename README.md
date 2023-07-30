@@ -82,4 +82,15 @@ to `Continue`, or `Inquire` in your shell's *Global* scope.
 
 This program requires [Pester](https://pester.dev/) to execute it's test suite.
 
+You can execute the following from within a PowerShell session.
+
 ``PS> Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'``
+
+However the test suite still requires optimization towards execution, as Pester 
+requires a certain setup for tests of nested modules to work. The `Force` switch 
+does not work as expected on the `Import-Module` cmdlet (within the `BeforeAll` 
+script blocks). Therefore it is advised to wrap the `Invoke-Pester` as follows
+so that the global scope gets teared down after execution.
+
+``PS> pwsh -c "Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'"``
+
