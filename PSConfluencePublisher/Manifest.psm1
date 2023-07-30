@@ -25,11 +25,13 @@ function Get-Manifest
     {
         try
         {
-            $raw = Get-Content $File
+            $raw = Get-Content $File | Out-String
         }
 
         catch
-        { 
+        {
+            Write-Debug $_
+
             $raw = '{"pages":{}, "attachments": {}}'
         }
 
@@ -66,6 +68,7 @@ function Set-Manifest
 
         if ($Backup)
         {
+            #FIXME: this always assumes the current working directory
             Copy-Item -Path $File -Destination "$(Split-Path -Leaf $File).bck"
         }
 

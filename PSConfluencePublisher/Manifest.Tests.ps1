@@ -3,7 +3,6 @@ $ErrorActionPreference = "Stop"
 
 BeforeAll {
     Import-Module (Join-Path $PSScriptRoot 'PSConfluencePublisher.psd1') -Force
-
 }
 
 AfterAll {
@@ -13,57 +12,145 @@ AfterAll {
 
 Describe 'Get-Manifest' `
 {
-
-    Context 'Parameterized' {
-
-        It 'throws no exception' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'known'}"
-                         'StatusCode' = 200
-                     }
+    Context 'Parameterized' `
+    {
+        It 'can successfully validate against the schema' `
+        {
+            InModuleScope Manifest `
+            {
+                 Mock Get-Content {
+                     return '{"pages":{}, "attachments": {}}'
                  }
 
-                 Test-Connection -Host 'confluence.contoso.com'
+                 #mocking Get-Content, therefore file name can be bogus
+                 Get-Manifest 'foobar.x'
             }
         }
 
-        It 'detects anonymous authentication' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'anonymous'}"
-                         'StatusCode' = 200
-                     }
+        It 'throws on schema mismatch' `
+        {
+            InModuleScope Manifest `
+            {
+                 Mock Get-Content {
+                     return '{"pagges":{}, "attsdachments": {}}'
                  }
 
-                 {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+                 #mocking Get-Content, therefore file name can be bogus
+                 {Get-Manifest 'foobar.x'} | Should -Throw
+            }
+        }
+    }
+}
+
+
+Describe 'Set-Manifest' `
+{
+    Context 'noBackup' `
+    {
+        It 'can successfully validate against the schema' `
+        {
+            InModuleScope Manifest `
+            {
+                 $mockManifest = @{
+                     'pages' = @{}
+                     'attachments' = @{}
+                 }
+
+                 Mock Set-Content {
+                    Should -Invoke -CommandName 'Set-Content' -Exactly -Times 1
+
+                    $args[1] | Should -Be 'foobar.x'
+
+                    $args[3] | Should -Be ($mockManifest | ConvertTo-JSON)
+                 }
+
+                 #mocking Get-Content, therefore file name can be bogus
+                 Set-Manifest `
+                    -Manifest $mockManifest `
+                    -File 'foobar.x'
             }
         }
 
-        It 'detects non 200 status codes' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'anonymous'}"
-                         'StatusCode' = 500
-                     }
+        It 'declines setting invalid schema' `
+        {
+            InModuleScope Manifest `
+            {
+                 $mockManifest = @{
+                     'pagges' = @{}
+                     'attachments' = @{}
                  }
 
-                 {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+                 #mocking Get-Content, therefore file name can be bogus
+                 {
+                     Set-Manifest `
+                         -Manifest $mockManifest `
+                         -File 'foobar.x'
+                 } | Should -Throw
+            }
+        }
+    }
+
+    Context 'Backup' `
+    {
+        It 'creates a backup when it should' `
+        {
+            InModuleScope Manifest `
+            {
+                 $mockManifest = @{
+                     'pages' = @{}
+                     'attachments' = @{}
+                 }
+
+                 Mock Set-Content {
+                    #FIXME: the scope is completely wrong
+                    Should -Invoke -CommandName 'Set-Content' -Exactly -Times 1
+                 }
+
+                Mock Copy-Item {
+                    #FIXME: the scope is completely wrong
+                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1
+
+                    $args[1] | Should -Be 'foobar.x'
+
+                    $args[3] | Should -Be 'foobar.x.bck'
+                }
+
+                 #mocking Get-Content, therefore file name can be bogus
+                 Set-Manifest `
+                    -Manifest $mockManifest `
+                    -File 'foobar.x' `
+                    -Backup $true
+            }
+        }
+
+        It 'handles paths outside of the current working directory correctly' `
+        {
+            InModuleScope Manifest `
+            {
+                 $mockManifest = @{
+                     'pages' = @{}
+                     'attachments' = @{}
+                 }
+
+                 Mock Set-Content {
+                    #FIXME: the scope is completely wrong
+                    Should -Invoke -CommandName 'Set-Content' -Exactly -Times 1
+                 }
+
+                Mock Copy-Item {
+                    #FIXME: the scope is completely wrong
+                    Should -Invoke -CommandName 'Copy-Item' -Exactly -Times 1
+
+                    $args[1] | Should -Be 'foo/bar/foobar.x'
+
+                    $args[3] | Should -Be 'foo/bar/foobar.x.bck'
+                }
+
+                 #mocking Get-Content, therefore file name can be bogus
+                 Set-Manifest `
+                    -Manifest $mockManifest `
+                    -File 'foo/bar/foobar.x' `
+                    -Backup $true
             }
         }
     }

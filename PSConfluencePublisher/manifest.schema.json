@@ -1,5 +1,5 @@
 {
-	"$id": "https://spec.victory-k.it/psconfluencepublisher.json",
+    "$id": "https://spec.victory-k.it/psconfluencepublisher.json",
     "x-authors": [
         "theodor.rodweil@victory-k.it"
     ],
