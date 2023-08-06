@@ -5,13 +5,13 @@
     ],
     "type": "object",
     "properties": {
-        "pages": {
+        "Pages": {
             "type": "array",
             "item": {
                 "$ref": "#/definitions/page"
             }
         },
-        "attachments": {
+        "Attachments": {
             "type": "array",
             "item": {
                 "$ref": "#/definitions/attachment"
@@ -19,8 +19,8 @@
         }
     },
     "required": [
-        "pages",
-        "attachments"
+        "Pages",
+        "Attachments"
     ],
     "definitions": {
         "page": {
