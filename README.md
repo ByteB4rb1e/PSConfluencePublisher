@@ -120,4 +120,4 @@ some tests fail, if ran via the wildcard discovery.
 Execute the following from within a PowerShell session to temporarily circumvent
 this problem:
 
-``PS > Get-ChildItem Contoso/*.Tests.ps1 | ForEach {pwsh -c Invoke-Pester (Resolve-Path -Relative $_)}``
+``$ pwsh -c 'Get-ChildItem PSConfluencePublisher/*.Tests.ps1 | ForEach {pwsh -c Invoke-Pester (Resolve-Path -Relative $_)}'``
