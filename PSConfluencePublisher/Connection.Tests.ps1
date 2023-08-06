@@ -8,58 +8,75 @@ BeforeAll {
 
 Describe 'Test-Connection' `
 {
-
-    Context 'Parameterized' {
+    Context 'default' {
+        BeforeAll `
+        {
+            Mock -ModuleName 'Connection' Get-PersonalAccessToken {
+                '01234567890123456789'
+            }
+        }
 
         It 'throws no exception' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'known'}"
-                         'StatusCode' = 200
-                     }
-                 }
-
-                 Test-Connection -Host 'confluence.contoso.com'
+            Mock -ModuleName 'Connection' Invoke-WebRequest {
+                @{
+                    'Content' = "{'type': 'known'}"
+                    'StatusCode' = 200
+                }
             }
+
+            Test-Connection -Host 'confluence.contoso.com'
+
+            Should -Invoke -CommandName 'Get-PersonalAccessToken' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
+
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
         }
 
         It 'detects anonymous authentication' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'anonymous'}"
-                         'StatusCode' = 200
-                     }
-                 }
-
-                 {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+            Mock -ModuleName 'Connection' Invoke-WebRequest {
+                @{
+                    'Content' = "{'type': 'anonymous'}"
+                    'StatusCode' = 200
+                }
             }
+
+            {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+
+            Should -Invoke -CommandName 'Get-PersonalAccessToken' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
+
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
         }
 
         It 'detects non 200 status codes' {
-
-            InModuleScope Connection {
-
-                 Mock Get-PersonalAccessToken {'01234567890123456789'}
-
-                 Mock Invoke-WebRequest {
-                     return @{
-                         'Content' = "{'type': 'anonymous'}"
-                         'StatusCode' = 500
-                     }
-                 }
-
-                 {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+            Mock -ModuleName 'Connection' Invoke-WebRequest {
+                @{
+                    'Content' = "{'type': 'anonymous'}"
+                    'StatusCode' = 500
+                }
             }
+
+            {Test-Connection -Host 'confluence.contoso.com'} | Should -Throw
+
+            Should -Invoke -CommandName 'Get-PersonalAccessToken' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
+
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Connection' ` `
+                -Exact `
+                -Times 1
         }
     }
 }
