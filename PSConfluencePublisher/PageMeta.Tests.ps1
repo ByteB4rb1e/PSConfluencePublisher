@@ -80,7 +80,7 @@ Describe 'Get-PageMeta' `
         {
             $mockPageMeta = @{
                 'Title' = 'foobar'
-                'PageId' = '0123456789'
+                'Id' = '0123456789'
             }
 
             $mockManifest = @(
@@ -118,7 +118,7 @@ Describe 'Get-PageMeta' `
             }
 
             Mock -ModuleName 'PageMeta' Update-PageMeta {
-                $PageId | Should -Be '123'
+                $Id | Should -Be '123'
 
                 $Version | Should -Be 9
 
@@ -202,7 +202,7 @@ Describe 'Update-PageMeta' `
         {
             {
                 Update-PageMeta `
-                    -PageId '0123456789' `
+                    -Id '0123456789' `
                     -Title 'foobar' `
                     -Manifest @{} 
             } | Should -Throw
@@ -220,10 +220,10 @@ Describe 'Update-PageMeta' `
 
             $pageMeta = Update-PageMeta `
                             -Title 'foobar' `
-                            -PageId '0123456789' `
+                            -Id '0123456789' `
                             -Manifest $mockManifest
 
-            $mockPageMeta.PageId | Should -Be '0123456789'
+            $mockPageMeta.Id | Should -Be '0123456789'
         }
 
         It 'updates extended' `
@@ -238,13 +238,13 @@ Describe 'Update-PageMeta' `
 
             Update-PageMeta `
                 -Title 'foobar' `
-                -PageId 'pageId' `
+                -Id 'pageId' `
                 -Version 9001 `
                 -AncestorTitle 'ancestorTitle' `
                 -Hash 'hash' `
                 -Manifest $mockManifest
 
-            $mockPageMeta.PageId | Should -Be 'pageId'
+            $mockPageMeta.Id | Should -Be 'pageId'
 
             $mockPageMeta.Version | Should -Be 9001
 

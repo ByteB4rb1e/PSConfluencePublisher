@@ -91,7 +91,7 @@ function Get-PageMeta
 
     Process
     {
-        If ($pageMeta -And $pageMeta.PageId)
+        If ($pageMeta -And $pageMeta.Id)
         {
             $pageMeta
 
@@ -121,7 +121,7 @@ function Get-PageMeta
         elseif ($results.Count -eq 1) 
         {
             Update-PageMeta `
-                -PageId $results[0].id `
+                -Id $results[0].id `
                 -Version ($results[0]._expandable | Select -ExpandProperty 'version') `
                 -Title $Title `
                 -Manifest $Manifest
@@ -153,7 +153,8 @@ function Update-PageMeta
     #>
     Param(
         [Parameter(Mandatory)] [String] $Title,
-        [Parameter(Mandatory)] [String] $PageId,
+        # remote Confluence page instance id
+        [Parameter(Mandatory)] [String] $Id,
         [Parameter()] [Int] $Version,
         [Parameter()] [String] $AncestorTitle,
         [Parameter()] [String] $Hash,
@@ -173,7 +174,7 @@ function Update-PageMeta
             throw "page titled `$Title` not indexed in Manifest."
         }
 
-        $pageMeta.PageId = $PageId
+        $pageMeta.Id = $Id
 
         If ($Version)
         {
