@@ -92,5 +92,5 @@ does not work as expected on the `Import-Module` cmdlet (within the `BeforeAll`
 script blocks). Therefore it is advised to wrap the `Invoke-Pester` as follows
 so that the global scope gets teared down after execution.
 
-``PS> pwsh -c "Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'"``
+``$ pwsh -c "Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'"``
 
