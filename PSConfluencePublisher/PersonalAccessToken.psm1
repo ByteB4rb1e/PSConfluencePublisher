@@ -18,7 +18,8 @@
 $ErrorActionPreference = "Stop"
 
 
-#session storage of Confluence personal access tokens
+# session storage of Confluence personal access tokens, scoped to this nested
+# module
 $script:PATS = @{}
 
 
