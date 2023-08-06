@@ -10,42 +10,46 @@ function Get-CachedPageMeta
 
         .EXAMPLE
             Get-CachedPageMeta `
-                 -Title 'd231cc3422bfdf96.xml' `
-                 -CacheIndexFile 'confluence-page-cache.json'
+                 -Title 'Page Title' `
+                 -Manifest @{...}
+
+        .NOTES
+            To test or not to test, that is the question... Since the
+            `Test-JSON` cmdlet requires serialized JSON, but we are working with
+            the deserialized Hashtable, it's too computationally intense to
+            always test the input upon every call. We therefore only make sure, 
+            that correct data is written to the filesystem. For the rest, each 
+            function is responsible for themself (learned that that's a valid 
+            reflexive pronoun today 🤓).
+
+            This function is lucky to get this note, because it's at the top 💯. 
+            Of course this applies to every function.
     #>
     Param(
         [Parameter(Mandatory)] [string] $Title,
-        [Parameter(Mandatory)] [string] $CacheIndexFile
+        [Parameter(Mandatory)] [Collections.Hashtable] $Manifest
     )
 
     Process
     {
-        try
-        {
-            $raw = Get-Content $CacheIndexFile
-        }
-
-        catch
-        { 
-            $raw = "{}"
-        }
-
-        $data = $raw | ConvertFrom-JSON
+        #it's fine this fails, if no `Pages` property is provided, since the
+        #object (according to the schema) would be invalid anyway.
+        $pages = $Manifest | Select -ExpandProperty 'Pages'
 
         try
         {
-            $pageMeta = $data | Select -ExpandProperty $Title
-
-            $pageMeta
+            $pageMeta = $pages | Select -ExpandProperty $Title
 
             Write-Debug "page id cache hit: $Title -> $($pageMeta.PageId)"
+
+            $pageMeta
         }
 
         catch
         {
-            $null
-
             Write-Debug "page id cache miss: $Title"
+
+            $null
         }
     }
 }
@@ -63,17 +67,17 @@ function Get-PageMeta
             instance host for the id by providing a space key and page title.
 
         .EXAMPLE
-           Get-PageMeta
-                -Host 'confluence.contoso.com' `
-                -Title 'Testitest' `
-                -Space 'TIARA' `
-                -CacheIndexFile 'confluence-page-cache.json'
+            Get-PageMeta `
+                 -Host 'confluence.contoso.com' `
+                 -Title 'Testitest' `
+                 -Space 'TIARA' `
+                 -CacheIndexFile 'confluence-page-cache.json'
     #>
     Param(
         [Parameter(Mandatory)] [string] $Host,
         [Parameter(Mandatory)] [string] $Title,
         [Parameter(Mandatory)] [string] $Space,
-        [Parameter(Mandatory)] [string] $CacheIndexFile
+        [Parameter(Mandatory)] [Collections.Hashtable] $Manifest
     )
 
     Process
@@ -82,7 +86,7 @@ function Get-PageMeta
         {
             $cachedPageMeta = Get-CachedPageMeta `
                 -Title $Title `
-                -CacheIndexFile $CacheIndexFile
+                -Manifest $Manifest
         }
 
         if ($cachedPageMeta)
@@ -92,17 +96,16 @@ function Get-PageMeta
 
         $escapedTitle = [uri]::EscapeDataString($Title)
 
+        #TODO: move this to a separate function
         $query = "title=${escapedTitle}&spaceKey=${Space}&expand=history"
-
-        Assert-PersonalAccessToken $Host
 
         Invoke-WebRequest `
             -Uri "https://${Host}/rest/api/content?$query" `
             -Method 'Get' `
             -Headers @{
-                'Authorization' = "Bearer $([System.Net.NetworkCredential]::new('', $script:PATS[$Host_]).Password)"
+                'Authorization' = "Bearer $(Get-PersonalAccessToken $Host)"
             } `
-            -OutVariable response
+            -OutVariable response | Out-Null
 
         $results = ($response.Content | ConvertFrom-JSON).results
 
@@ -110,19 +113,20 @@ function Get-PageMeta
         {
             throw "more than one result for query: $query"
         }
+
         elseif ($results.Count -eq 1) 
         {
-            Register-PageMeta `
+            Update-PageMeta `
                 -PageId $results[0].id `
                 -Version ($results[0]._expandable | Select -ExpandProperty 'version') `
                 -Title $Title `
-                -CacheIndexFile $CacheIndexFile
+                -Manifest $Manifest
         }
     }
 }
 
 
-function Register-PageMeta
+function Update-PageMeta
 {
     <#
         .SYNOPSIS
@@ -138,39 +142,44 @@ function Register-PageMeta
                 -Content @{}
     #>
     Param(
-        [Parameter(Mandatory)] [string] $PageId,
-        [Parameter()]          [int]    $Version = 0,
         [Parameter(Mandatory)] [string] $Title,
-        [Parameter()]          [string] $ContentHash = '',
-        [Parameter(Mandatory)] [string] $CacheIndexFile
+        [Parameter(Mandatory)] [string] $PageId,
+        [Parameter()]          [int] $Version,
+        [Parameter()]          [string] $AncestorTitle,
+        [Parameter()]          [string] $Hash,
+        [Parameter(Mandatory)] [Collections.Hashtable] $Manifest
     )
 
     Process
     {
-        try
+        $metaPages = $Manifest.Pages
+
+        if ((-Not $metaPages) -Or (-Not $metaPages.$Title))
         {
-            $raw = Get-Content $CacheIndexFile
+            throw "page titled `$Title` not indexed in Manifest."
         }
 
-        catch
-        { 
-            $raw = "{}"
+        $meta = $metaPages.$Title
+
+        $meta['PageId'] = $PageId
+
+        if ($Version)
+        {
+            $meta['Version'] = $Version
         }
 
-        $data = $raw | ConvertFrom-JSON
+        if ($AncestorTitle)
+        {
+            $meta['AncestorTitle'] = $AncestorTitle
+        }
 
-        $data | Add-Member -Name $Title `
-            -Value @{
-                'PageId' = $PageId
-                'Version' = $Version
-                'ContentHash' = $ContentHash
-            } `
-            -MemberType NoteProperty `
-            -Force
+        # if content didn't update, hash stays the same
+        if ($Hash)
+        {
+            $meta['Hash'] = $Hash
+        }
 
-        Set-Content -Path $CacheIndexFile -Value ($data | ConvertTo-JSON)
-
-        Write-Debug "indexed page id: $Title -> $PageId"
+        Write-Debug "register: $Title -> $PageId"
     }
 }
 
@@ -184,27 +193,33 @@ function New-Page
         .DESCRIPTION
 
         .EXAMPLE
-            Add-ConfluencePage 
+            Add-ConfluencePage `
                 -Host 'confluence.contoso.com' `
                 -Space 'TIARA' `
                 -Title 'Testitest' `
                 -Content @{}
     #>
     Param(
+        # confluence instance hostname
         [Parameter(Mandatory)] [string] $Host,
-        # The name of the Confluence space to publish to
+        # name of the Confluence space to publish to
         [Parameter(Mandatory)] [string] $Space,
         # title of page to be published
         [Parameter(Mandatory)] [string] $Title,
-        # content of page
-        [Parameter(Mandatory)] [string] $Content,
-        # parent page id
-        [Parameter()] [string] $Ancestor
+        # manifest
+        [Parameter(Mandatory)] [Collections.Hashtable] $Manifest
     )
 
     Process
     {
-        Assert-PersonalAccessToken $Host
+        $meta = $Manifest.Pages.$Title
+
+        if (-Not $meta.Ref)
+        {
+            throw "no reference to local content for page `$Title`."
+        }
+
+        $content = Get-Content -Path $meta.Ref
 
         $transportBody = @{
             'type' = 'page'
@@ -214,7 +229,7 @@ function New-Page
             }
             'body' = @{
                 'storage' = @{
-                    'value' = $Content
+                    'value' = $content
                     'representation' = 'storage'
                 }
             }
@@ -224,7 +239,7 @@ function New-Page
             -Uri "https://${Host}/rest/api/content" `
             -Method 'Post' `
             -Headers @{
-                'Authorization' = "Bearer $([System.Net.NetworkCredential]::new('', $script:PATS[$Host_]).Password)"
+                'Authorization' = "Bearer $(Get-PersonalAccessToken $Host)"
             } `
             -ContentType "application/json" `
             -Body $transportBody `
@@ -235,10 +250,11 @@ function New-Page
     {
         $response = ($rawResponse.Content | ConvertFrom-JSON)
 
-        @{
-            'PageId' = $response.Id
-            'Version' = $response.version | Select -ExpandProperty 'number'
-        }
+        $meta.PageId = $response.Id
+
+        $meta.Version = $response.version | Select -ExpandProperty 'number'
+
+        $meta
     }
 }
 
@@ -252,31 +268,55 @@ function Update-Page
         .DESCRIPTION
 
         .EXAMPLE
-            Add-ConfluencePage 
+            Update-ConfluencePage 
                 -Host 'confluence.contoso.com' `
                 -Space 'TIARA' `
                 -Title 'Testitest' `
-                -Content @{}
+                -Manifest @{}
     #>
     Param(
         [Parameter(Mandatory)] [string] $Host,
-        # The page id of an existing page
-        [Parameter(Mandatory)] [string] $PageId,
         # The name of the Confluence space to publish to
         [Parameter(Mandatory)] [string] $Space,
         # title of page to be published
         [Parameter(Mandatory)] [string] $Title,
-        # version of content
-        [Parameter(Mandatory)] [int] $Version,
-        # content of page
-        [Parameter(Mandatory)] [string] $Content,
-        # parent page id
-        [Parameter()] [string] $Ancestor
+        # manifest
+        [Parameter(Mandatory)] [Collections.Hashtable] $Meta
     )
 
     Process
     {
-        Assert-PersonalAccessToken $Host
+        $meta = $Manifest.Pages.$Title
+
+        if (-Not $meta.Ref)
+        {
+            throw "no reference to local content for page '$Title'."
+        }
+
+        if (-Not $meta.Id)
+        {
+            throw "no id for page '$Title'."
+        }
+
+        $content = Get-Content -Path $meta.Ref
+
+        #FIXME: create a stream instead of reading from filesystem again
+        $hash = (Get-FileHash -Path $meta.Ref -Algorithm SHA256).Hash
+
+        if ($hash -eq $meta.Hash)
+        {
+            Write-Host "content unchanged, skipping: '$Title'"
+
+            # yep, this is funny... This behaves like a return statement, because
+            # a cmdlet, treats the input as an array of inputs. We keep it that
+            # way so that all functions can properly act upon pipes. See
+            # additional information on 'Process' blocks.
+            continue
+        }
+
+        # we're not updating this in place, so that we don't have to reset the
+        # value opon failure
+        $version = $meta.Version + 1
 
         $transportBody = @{
             'id' = $PageId
@@ -292,7 +332,7 @@ function Update-Page
                 }
             }
             'version' = @{
-                'number' = $Version
+                'number' = $version
             }
         } | ConvertTo-JSON
 
@@ -300,7 +340,7 @@ function Update-Page
             -Uri "https://${Host}/rest/api/content/$PageId" `
             -Method 'Put' `
             -Headers @{
-                'Authorization' = "Bearer $([System.Net.NetworkCredential]::new('', $script:PATS[$Host_]).Password)"
+                'Authorization' = "Bearer $(Get-PersonalAccessToken $Host)"
             } `
             -ContentType "application/json" `
             -Body $transportBody `
@@ -310,6 +350,12 @@ function Update-Page
     End
     {
         $response = ($rawResponse.Content | ConvertFrom-JSON)
+
+        $meta.Version = $response.version | Select -ExpandProperty 'number'
+
+        $meta.Hash = $hash
+
+        $meta
     }
 }
 
@@ -324,112 +370,77 @@ function Publish-Page
         # name of Confluence space
         [Parameter(Mandatory)] [string] $Space,
         # manifest object
-        [Parameter(Mandatory)] [PSObject] $Manifest
+        [Parameter(Mandatory, ValueFromPipeline)] [PSObject] $Meta
     )
 
-    Begin
+    Process
     {
-        $pageMeta = Get-PageMeta `
+        ForEach($meta in $Meta)
+        {
+            $meta = Get-PageMeta `
+                            -Host $hostname `
+                            -Space $spaceName `
+                            -Title $Title `
+                            -Manifest $Manifest
+
+            if ($meta.AncestorTitle)
+            {
+                $ancestorPageMeta = Get-PageMeta `
+                                        -Host $hostname `
+                                        -Space $spaceName `
+                                        -Title $pageMeta.AncestorTitle `
+                                        -Manifest $Manifest
+
+                if (-Not ($ancestorPageMeta -Or $ancestorPageMeta.PageId))
+                {
+                    Write-Host "ancestor, not published, skipping: $Title"
+
+                    continue
+                }
+            }
+
+            if (-Not $pageId)
+            {
+                Write-Host ("create ${_}: $prettyName")
+
+                try {
+                    New-Page `
                         -Host $hostname `
                         -Space $spaceName `
                         -Title $Title `
                         -Manifest $Manifest
-    }
+                }
 
-    Process
-    {
-        if ($pageMeta.ContentHash -eq $_)
-        {
-            Write-Host "skipping (no changes): $Title"
+                catch
+                {
+                    Write-Host "error for '$Title', skipping: $_"
 
-            return
-        }
+                    continue
+                }
+            }
 
-        $pageId = $pageMeta.PageId
-
-        $path = Join-Path $basepath 'content' "$_"
-
-        $pageContent = Get-Content $path | Out-String
-
-        $prettyName = $Title
-
-        if ($data.pages[$_].ancestor_id)
-        {
-            $ancestorTitle = $data.pages[$data.pages[$_].ancestor_id].title
-
-            $ancestorPageMeta = Get-PageMeta `
-                                    -Host $hostname `
-                                    -Space $spaceName `
-                                    -Title $ancestorTitle `
-                                    -CacheIndexFile $cacheIndexFile
-
-            if ($ancestorPageMeta)
+            else
             {
-                $ancestorPageId = $ancestorPageMeta.PageId
+                Write-Host ("update ${_} (${pageId}): $prettyName")
+
+                try
+                {
+                    Update-Page `
+                        -Host $hostname `
+                        -Space $Space `
+                        -Title $Title `
+                        -Manifest $Manifest
+                }
+
+                catch
+                {
+                    Write-Host "error for '$Title', skipping: $_"
+
+                    continue
+                }
             }
 
-            $prettyName += " [$ancestorPageId]"
-        }
-
-        if (-Not $pageId)
-        {
-            Write-Host ("create ${_}: $prettyName")
-
-            try {
-                $pageMeta = New-Page `
-                                -Host $hostname `
-                                -Space $spaceName `
-                                -Title $pageTitle `
-                                -Content $pageContent `
-                                -Ancestor $ancestorPageId
             }
 
-            catch
-            {
-                Write-Host "error (skipping): $prettyName"
-
-                return
-            }
-
-
-            Register-PageMeta `
-                -PageId $pageMeta.PageId `
-                -Version $pageMeta.Version `
-                -Title $pageTitle `
-                -ContentHash $_ `
-                -CacheIndexFile $cacheIndexFile
-        }
-        else
-        {
-            Write-Host ("update ${_} (${pageId}): $prettyName")
-
-            $version = $pageMeta.Version + 1
-
-            try
-            {
-                Update-Page `
-                    -Host $hostname `
-                    -PageId $pageId `
-                    -Space $spaceName `
-                    -Title $pageTitle `
-                    -Version  $version `
-                    -Content $pageContent `
-                    -Ancestor $ancestorPageId
-            }
-
-            catch
-            {
-                Write-Host "error (skipping): $prettyName"
-
-                return
-            }
-
-            Register-PageMeta `
-                -PageId $pageMeta.PageId `
-                -Version $version `
-                -Title $pageTitle `
-                -ContentHash $_ `
-                -CacheIndexFile $cacheIndexFile
-        }
     }
 }
