@@ -6,19 +6,15 @@
     "type": "object",
     "properties": {
         "pages": {
-            "type": "object",
-            "patternProperties": {
-                ".*": {
-                    "$ref": "#/definitions/page"
-                }
+            "type": "array",
+            "item": {
+                "$ref": "#/definitions/page"
             }
         },
         "attachments": {
-            "type": "object",
-            "patternProperties": {
-                ".*": {
-                    "$ref": "#/definitions/attachment"
-                }
+            "type": "array",
+            "item": {
+                "$ref": "#/definitions/attachment"
             }
         }
     },
@@ -31,7 +27,11 @@
             "type": "object",
             "description": "Local Confluence page/container attachment metadata",
             "properties": {
-                "PageId": {
+                "Title": {
+                    "type": "string",
+                    "description": "Title of page"
+                },
+                "Id": {
                     "type": "string",
                     "description": "Id of attachment defined by Confluence instance. The id is generated after the publishing of a page."
                 },
@@ -52,7 +52,7 @@
                 }
             },
             "required": [
-                "Hash",
+                "Title",
                 "Ref"
             ]
         },
@@ -60,7 +60,11 @@
             "type": "object",
             "description": "Local Confluence page/container attachment metadata",
             "properties": {
-                "AttachmentId": {
+                "Name": {
+                    "type": "string",
+                    "description": "name of attachment, which must be unique within the container page"
+                },
+                "Id": {
                     "type": "string",
                     "description": "Id of attachment defined by Confluence instance. The id is generated after the publishing of an attachment."
                 },
@@ -83,6 +87,7 @@
                 }
             },
             "required": [
+                "Name",
                 "Hash",
                 "MimeType",
                 "ContainerPageTitle",
