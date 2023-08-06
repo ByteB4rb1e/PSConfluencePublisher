@@ -193,10 +193,13 @@ function Optimize-PagesManifest
             this.
     #>
     Param(
+        # Manifest to sort
         [Parameter(Mandatory)] [Array] $Manifest,
+        # Left partition border
         [Parameter(Mandatory)] [Int] $Lo,
+        # Right partition border
         [Parameter(Mandatory)] [Int] $Hi,
-        # cache for storing the numeric ancestral generation of pages
+        # Cache for storing the numeric ancestral generation of pages
         [Parameter(Mandatory)] [Collections.Hashtable] $GenerationCache
     )
 
