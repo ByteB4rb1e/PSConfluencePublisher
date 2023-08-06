@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot 'PSConfluencePublisher.psd1') -Force
+    Import-Module (Join-Path $PSScriptRoot 'PSConfluencePublisher.psd1')
 }
 
 Describe 'Get-StringHash' `

@@ -104,20 +104,7 @@ You can execute the following from within a PowerShell session.
 
 ``PS> Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'``
 
-However the test suite still requires optimization towards execution, as Pester 
-requires a certain setup for tests of nested modules to work. The `Force` switch 
-does not work as expected on the `Import-Module` cmdlet (within the `BeforeAll` 
-script blocks). Therefore it is advised to wrap the `Invoke-Pester` as follows
-so that the global scope gets teared down after execution.
+or the following, from within a POSIX shell and PowerShell Core being present:
 
 
 ``$ pwsh -c "Invoke-Pester PSConfluencePublisher/*.Tests.ps1 -Show 'All'"``
-
-There currently is an issue with the invocation of the test suites (see
-[Pester Issue #2386](https://github.com/pester/Pester/issues/2386)), where
-some tests fail, if ran via the wildcard discovery.
-
-Execute the following from within a PowerShell session to temporarily circumvent
-this problem:
-
-``$ pwsh -c 'Get-ChildItem PSConfluencePublisher/*.Tests.ps1 | ForEach {pwsh -c Invoke-Pester (Resolve-Path -Relative $_)}'``
