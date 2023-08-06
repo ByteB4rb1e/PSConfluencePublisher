@@ -10,6 +10,22 @@ pages, page ancestry, and attachments.
 Publishing is supported via the Confluence Server REST API through 
 [Personal Access Token (PAT) authorization](https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html).
 
+## (Interchange) Manifest
+
+The manifest consists of a *Pages* manifest and an *Attachments* manifest, which
+store metadata on pages and attachments. Even though the *Pages* manifests 
+(represented as array object) is expected to have the appropriate order for
+publishing, where the oldest ancestral generation of pages is published before 
+the youngest, this isn't trusted and the pages manifest is ordered in-place, 
+through a Hoare partitioned Quick-Sort via the ``Optimize-PagesManifest`` function.
+
+The manifest is treated as read/write and used for storing additional metadata
+to reduce the amount of remote data retrieval. This includes hashing of page and
+attachments content in addition to tracking publishing versions and remote ids.
+Through a JSONSchema, it is made sure that the manifest stays consistent for
+interchange with the original manifest producer system
+(```sphinxcontrib.xconfluencebuilder``).
+
 ## Usage
 
 You can install the module via [nuget](https://www.nuget.org).
@@ -34,7 +50,9 @@ PS> Import-Module (Join-Path 'PSConfluencePublisher'
 ```
 
 Next, register your personal access token for your Confluence server instance. 
-The token is stored as a *SecureString* within the *Script* scope.
+The token is stored as a *SecureString* type within the scope of the responsible
+ested module (``PersonalAccessToken``). It is expected to have one Personal
+Access Token per Confluence instance, per PowerShell session.
 
 ```
 Register-PersonalAccessToken `
@@ -44,8 +62,8 @@ Register-PersonalAccessToken `
 
 Optionally, you may test the connectivity to your Confluence instance. The test
 will try to retrieve your user profile, in order to determine whether the PAT 
-authenticates, since an invalid PAT simply results in anonymous authentication 
-for some REST API functions.
+authenticates, since an invalid PAT may results in anonymous authentication,
+that does not return a fault HTTP status code for some REST API functions.
 
 ```
 Test-Connection confluence.contoso.com
@@ -62,10 +80,10 @@ Publish-Dump `
     -DumpIndex build/docs/confluence.out/data.json
 ```
 
-The manifest may be writable, where it is then used to cache the publishing 
+The manifest MUST be writable, where it is then used to cache the publishing 
 status of each page and attachment.
 
-You may publish a single page, which however requires it's direct ancestor page 
+You may publish a single page, which however requires it's direct ancestral page 
 to exist.
 
 ```
