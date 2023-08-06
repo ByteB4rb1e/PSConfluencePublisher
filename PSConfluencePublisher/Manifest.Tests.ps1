@@ -340,9 +340,9 @@ Describe 'Get-AncestralPageGenerationCache' `
             $result.foobar1 | Should -Be 1
 
             $result.foobar2 | Should -Be 2
-            
+
             $result.foobar3 | Should -Be 3
-            
+
             $result.foobar4 | Should -Be 4
         }
     }
