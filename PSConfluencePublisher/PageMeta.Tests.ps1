@@ -171,24 +171,24 @@ Describe 'Get-PageMeta' `
                     -Title 'foobar' `
                     -Space 'foobar' `
                     -Manifest @{'Pages'= {}}
-            } | Should -Throw
+            } | Should -Throw 'more than one result for query*'
         }
 
         It 'throws an exception, if there is no result' `
         {
-            Mock Invoke-WebRequest {
+            Mock -ModuleName 'PageMeta' Invoke-WebRequest {
                 @{
                     'Content' = '{"results": []}'
                 }
             }
 
-            {
-                Get-PageMeta `
-                    -Host 'confluence.contoso.com' `
-                    -Title 'foobar' `
-                    -Space 'foobar' `
-                    -Manifest @{'Pages'= {}}
-            } | Should -Throw
+            $result = Get-PageMeta `
+                          -Host 'confluence.contoso.com' `
+                          -Title 'foobar' `
+                          -Space 'foobar' `
+                          -Manifest @{'Pages'= {}}
+
+            $result | Should -Be $null
         }
     }
 }
