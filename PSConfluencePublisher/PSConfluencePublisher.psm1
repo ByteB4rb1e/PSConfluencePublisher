@@ -243,55 +243,6 @@ function Get-PageMeta
 }
 
 
-function Get-CachedPageMeta
-{
-    <#
-        .SYNOPSIS
-            Get a locally indexed/cached Confluence page id
-
-        .EXAMPLE
-            Get-CachedPageMeta `
-                 -Title 'd231cc3422bfdf96.xml' `
-                 -CacheIndexFile 'confluence-page-cache.json'
-    #>
-    Param(
-        [Parameter(Mandatory)] [string] $Title,
-        [Parameter(Mandatory)] [string] $CacheIndexFile
-    )
-
-    Process
-    {
-        try
-        {
-            $raw = Get-Content $CacheIndexFile
-        }
-
-        catch
-        { 
-            $raw = "{}"
-        }
-
-        $data = $raw | ConvertFrom-JSON
-
-        try
-        {
-            $pageMeta = $data | Select -ExpandProperty $Title
-
-            $pageMeta
-
-            Write-Debug "page id cache hit: $Title -> $($pageMeta.PageId)"
-        }
-
-        catch
-        {
-            $null
-
-            Write-Debug "page id cache miss: $Title"
-        }
-    }
-}
-
-
 function Register-PageMeta
 {
     <#
