@@ -4,8 +4,7 @@
 /dist/
 
 # FAT stuff (in a filesystem sense)
-/_*
-/._*
+**/._*
 
 #vim cache
 *.swp
