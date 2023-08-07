@@ -1,0 +1,24 @@
+<ac:structured-macro ac:name="info">
+<ac:rich-text-body><p><code>confluence_conf.py</code> is not required, it’s just a helper module to be able to configure <code>sphinxcontrib.confluencebuilder</code> through environment variables.</p></ac:rich-text-body>
+</ac:structured-macro>
+<p>To run this sample, <a href="https://pypi.org/project/pipenv/">pipenv</a> is required.</p><p>First, install the <em>venv</em> by executing the following command from within the <code>samples/default/</code> directory:</p><ac:structured-macro ac:name="code">
+<ac:parameter ac:name="language">python</ac:parameter>
+<ac:parameter ac:name="linenumbers">false</ac:parameter>
+<ac:plain-text-body><![CDATA[$ python3 -m pipenv install]]></ac:plain-text-body>
+</ac:structured-macro>
+<ac:structured-macro ac:name="info">
+<ac:rich-text-body><p>To contain the virtual environment within the current directory, create an empty directory named <code>.venv</code>.</p></ac:rich-text-body>
+</ac:structured-macro>
+<p>Afterwards, execute the following command:</p><ac:structured-macro ac:name="code">
+<ac:parameter ac:name="language">python</ac:parameter>
+<ac:parameter ac:name="linenumbers">false</ac:parameter>
+<ac:plain-text-body><![CDATA[$ python3 -m pipenv run build-sphinx]]></ac:plain-text-body>
+</ac:structured-macro>
+<p>The backend for the command can be inspected in <code>Pipfile</code>.</p><p>You should now have a directory</p><p style="clear: both;">Important Content</p>
+<ul>
+<li>
+<ac:link>
+<ri:page ri:content-title="Cats" />
+<ac:link-body>Cats</ac:link-body>
+</ac:link></li>
+</ul>
