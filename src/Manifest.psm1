@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 
 $script:schema = Get-Content (
-    Join-Path $PSScriptRoot 'manifest.schema.json'
+    Join-Path -Path  $PSScriptRoot 'schemas' 'manifest.schema.json'
 ) | Out-String
 
 
@@ -32,12 +32,12 @@ function Get-Manifest
         {
             Write-Debug $_
 
-            $raw = '{"pages":{}, "attachments": {}}'
+            $raw = '{"Pages":[], "attachments": []}'
         }
 
         $raw | Test-JSON -Schema $script:schema | Out-Null
 
-        $data = $raw | ConvertFrom-JSON
+        $raw | ConvertFrom-JSON
     }
 }
 

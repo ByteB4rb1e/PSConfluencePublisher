@@ -2,7 +2,9 @@
 $ErrorActionPreference = "Stop"
 
 BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot 'PSConfluencePublisher.psd1')
+    Import-Module (Join-Path $PSScriptRoot '..' 'src' `
+                             'PSConfluencePublisher.psd1')
+
 }
 
 
@@ -20,7 +22,7 @@ Describe 'Get-Manifest' `
             InModuleScope Manifest `
             {
                  Mock Get-Content {
-                     return '{"pages":[], "attachments": []}'
+                     return '{"Pages":[], "Attachments": []}'
                  }
 
                  #mocking Get-Content, therefore file name can be bogus
@@ -53,8 +55,8 @@ Describe 'Set-Manifest' `
             InModuleScope Manifest `
             {
                  $mockManifest = @{
-                     'pages' = @()
-                     'attachments' = @()
+                     'Pages' = @()
+                     'Attachments' = @()
                  }
 
                  Mock Set-Content {
@@ -98,8 +100,8 @@ Describe 'Set-Manifest' `
             InModuleScope Manifest `
             {
                  $mockManifest = @{
-                     'pages' = @()
-                     'attachments' = @()
+                     'Pages' = @()
+                     'Attachments' = @()
                  }
 
                  Mock Set-Content {
@@ -129,8 +131,8 @@ Describe 'Set-Manifest' `
             InModuleScope Manifest `
             {
                  $mockManifest = @{
-                     'pages' = @()
-                     'attachments' = @()
+                     'Pages' = @()
+                     'Attachments' = @()
                  }
 
                  Mock Set-Content {

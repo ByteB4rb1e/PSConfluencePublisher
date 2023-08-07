@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
-        <id>PSConfluencePublisher</id>
+        <id>victorykit.PSConfluencePublisher</id>
+        <title>victorykit.PSConfluencePublisher</title>
         <version>1.1.0</version>
         <description>standalone publisher for xconfluencebuilder</description>
-        <authors>theodor.rodweil@victory-k.it</authors>
+        <authors>Victory Karma IT</authors>
         <owners>Theodor Rodweil</owners>
         <license type="expression">DL-DE-BY-2.0</license>
-        <readme>README.md</readme>
+        <readme>.\README.md</readme>
         <copyright>Victory Karma IT</copyright>
-        <title>Powershell Confluence Publisher</title>
+        <tags>PowerShell</tags>
     </metadata>
+    <files>
+        <file src="src\**\*" target="."/>
+        <file src="README.md" target="." />
+    </files>
 </package>

@@ -2,7 +2,8 @@
 $ErrorActionPreference = "Stop"
 
 BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot 'PSConfluencePublisher.psd1')
+    Import-Module (Join-Path $PSScriptRoot '..' 'src' `
+                             'PSConfluencePublisher.psd1')
 }
 
 

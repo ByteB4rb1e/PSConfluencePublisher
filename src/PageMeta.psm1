@@ -122,7 +122,7 @@ function Get-PageMeta
         {
             Update-PageMeta `
                 -Id $results[0].id `
-                -Version ($results[0]._expandable | Select -ExpandProperty 'version') `
+                -Version $results[0]._expandable.version `
                 -Title $Title `
                 -Manifest $Manifest
         }

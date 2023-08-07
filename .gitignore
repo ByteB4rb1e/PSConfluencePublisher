@@ -1,6 +1,11 @@
+
+.DS_Store
+/test-reports/
+/dist/
+
+# FAT stuff (in a filesystem sense)
 /_*
 /._*
-.DS_Store
 
 #vim cache
 *.swp
