@@ -23,7 +23,7 @@ Copyright = '(c) victory-k.it. All rights reserved.'
 RootModule = 'PSConfluencePublisher.psm1'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'External Confluence publisher for xconfluencebuilder'
 
 # Minimum version of the PowerShell engine required by this module
 # PowerShellVersion = '6.0'
@@ -88,7 +88,7 @@ AliasesToExport = @()
 
 # List of all files packaged with this module
 FileList = @(
-    "manifest.schema.json"
+    "schemas/manifest.schema.json"
 )
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.

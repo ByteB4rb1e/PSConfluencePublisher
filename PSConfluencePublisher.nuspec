@@ -1,20 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>victorykit.PSConfluencePublisher</id>
-        <title>victorykit.PSConfluencePublisher</title>
+        <title>PSConfluencePublisher</title>
         <version>1.0.0</version>
-        <description>standalone publisher for xconfluencebuilder</description>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description> Standalone Atlassian Confluence publisher component for the
+        victorykit-xconfluencebuilder Sphinx extension, which is a (temporary ) 
+        drop-in replacement for sphinxcontrib.confluencebuilder. See
+        https://bitbucket.org/victorykit/psconfluencepublisher/src/master/README.md
+        , for a full description.</description>
         <projectUrl>https://bitbucket.org/victorykit/psconfluencepublisher</projectUrl>
-        <authors>Victory Karma IT</authors>
-        <owners>Theodor Rodweil</owners>
-        <license type="expression">DL-DE-BY-2.0</license>
-        <readme>.\README.md</readme>
-        <copyright>Victory Karma IT</copyright>
-        <tags>PowerShell</tags>
+        <owners>Victory Karma IT</owners>
+        <authors>Theodor Rodweil</authors>
+        <licenseUrl>https://bitbucket.org/victorykit/psconfluencepublisher/src/master/LICENSE</licenseUrl>
+        <readme>README.md</readme>
+        <releaseNotes>See
+        https://bitbucket.org/victorykit/psconfluencepublisher/src/master/CHANGELOG.md
+        , for a full changelog.</releaseNotes>
+        <copyright>(c) 2023 Victory Karma IT. All rights reserved.</copyright>
+        <tags>PSModule PSGet Confluence</tags>
     </metadata>
     <files>
         <file src="src\**\*" target="."/>
         <file src="README.md" target="." />
+        <file src="LICENSE*" target="." />
     </files>
 </package>
