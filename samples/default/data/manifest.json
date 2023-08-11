@@ -15,19 +15,19 @@
             "Name": "pexels-just-a-couple-photos-3777622.jpg",
             "ContainerPageTitle": "Cats",
             "MimeType": "image/jpeg",
-            "Ref": "attachments/pexels-just-a-couple-photos-3777622.jpg"
+            "Ref": "attachments/Cats/pexels-just-a-couple-photos-3777622.jpg"
         },
         {
             "Name": "pexels-sami-aksu-14356302.jpg",
             "ContainerPageTitle": "Cats",
             "MimeType": "image/jpeg",
-            "Ref": "attachments/pexels-sami-aksu-14356302.jpg"
+            "Ref": "attachments/Cats/pexels-sami-aksu-14356302.jpg"
         },
         {
             "Name": "objects.inv",
             "ContainerPageTitle": "Default Sample~",
             "MimeType": "application/octet-stream",
-            "Ref": "attachments/objects.inv"
+            "Ref": "attachments/Default+Sample~/objects.inv"
         }
     ]
 }
