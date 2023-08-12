@@ -2,259 +2,319 @@
 $ErrorActionPreference = "Stop"
 
 
-BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot '..' 'src' `
-                             'PSConfluencePublisher.psd1')
+If ((Get-Module -Name 'Pester').Version.Major -ge 5)
+{
+    BeforeAll `
+    {
+        Import-Module "$PSScriptRoot/../src/PSConfluencePublisher.psd1"
+    }
+}
+
+Else
+{
+    Import-Module "$PSScriptRoot/../src/PSConfluencePublisher.psd1" -Force
 }
 
 
 Describe 'New-Page' `
 {
-    Context 'default' `
+    BeforeEach `
     {
-        BeforeAll `
-        {
-            Mock -ModuleName 'Page' Get-Content {
-                'foobar content'
-            }
+        $defaultMockContent = 'foobar content'
 
-            Mock -ModuleName 'Page' Get-PersonalAccessToken {
-                '01234567890123456789'
-            }
+        $defaultMockSpaceName = 'testitest'
+
+        $defaultMockTitle = 'foobar'
+
+        $defaultMockPageMeta = @{
+            'Title' = $defaultMockTitle
+            'Ref' = 'pages/320okffs.xml'
         }
 
-        It 'succeeds' `
-        {
-            $mockPageMeta = @{
-                'Title' = 'foobar'
-                'Ref' = 'pages/320okffs.xml'
-            }
+        $defaultMockManifest = @(
+            $defaultMockPageMeta
+        )
 
-            $mockManifest = @(
-                $mockPageMeta
-            )
-
-            Mock -ModuleName 'Page' Get-PageMeta {
-                $mockPageMeta
-            }
-
-            Mock -ModuleName 'Page' Update-PageMeta {
-                $Id | Should -Be '123'
-
-                $mockPageMeta.Id = '123'
-
-                $mockPageMeta.Version = 1
-
-                $mockPageMeta.Hash = 'NOTAREALHASH'
-
-                $mockPageMeta
-            }
-
-            Mock -ModuleName 'Page' Invoke-WebRequest {
-                $Uri | Should -Be 'https://confluence.contoso.com/rest/api/content'
-
-                $body_ = $Body | ConvertFrom-JSON
-
-                $body_.type | Should -Be 'page'
-
-                $body_.body.storage.representation | Should -Be 'storage'
-
-                $body_.body.storage.value | Should -Be 'foobar content'
-
-                $body_.space.key | Should -Be 'testitest'
-
-                $body_.title | Should -Be 'title'
-
-                @{
-                    'Content' = '{"Id": "123", "version": {"number": 1}}'
-                }
-            }
-
-            New-Page `
-                -Host 'confluence.contoso.com' `
-                -Space 'testitest' `
-                -Title 'title' `
-                -Manifest $mockManifest
-
-            $mockPageMeta.Id | Should -Be "123"
-
-            $mockPageMeta.Version | Should -Be 1
-
-            $mockPageMeta.Hash | Should -Be (
-                'NOTAREALHASH'
-            )
-
-            Should -Invoke -CommandName 'Get-PageMeta' `
-                -ModuleName 'Page' `
-                -Exactly `
-                -Times 1
-
-            Should -Invoke -CommandName 'Update-PageMeta' `
-                -ModuleName 'Page' `
-                -Exactly `
-                -Times 1
+        $mockIndex = @{
+            $defaultMockTitle = 0
         }
-    }
-}
 
-
-Describe 'Update-Page' `
-{
-    BeforeAll `
-    {
         Mock -ModuleName 'Page' Get-Content {
-            'foobar content'
+            $defaultMockContent
         }
 
         Mock -ModuleName 'Page' Get-PersonalAccessToken {
             '01234567890123456789'
         }
+
+        Mock -ModuleName 'Page' Invoke-WebRequest {
+            $Uri | Should -Be 'https://confluence.contoso.com/rest/api/content'
+
+            $body_ = $Body | ConvertFrom-JSON
+
+            $body_.type | Should -Be 'page'
+
+            $body_.body.storage.representation | Should -Be 'storage'
+
+            $body_.body.storage.value | Should -Be $defaultMockContent
+
+            $body_.space.key | Should -Be $defaultMockSpaceName
+
+            # TODO: write proper parameter filters, so that we can reuse this
+            # mock with more thorough/deep assertions on properties
+            # $body_.title | Should -Be $defaultMockTitle
+
+            @{
+                'Content' = '{"Id": "123", "version": {"number": 1}}'
+            }
+        }
+
+        Mock -ModuleName 'Page' Get-StringHash {
+            @{
+                'Hash' = 'NOTAREALHASH'
+            }
+        }
     }
 
     Context 'default' `
     {
-        BeforeAll `
+        It 'accepts parameterized input' `
         {
-            Mock -ModuleName 'Page' Get-StringHash {
-                @{
-                    'Hash' = 'NOTAREALHASH'
-                }
-            }
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Manifest $defaultMockManifest `
+                          -Index $mockIndex
+
+            $result | Should -Be $defaultMockPageMeta
+
+            $result.Id | Should -Be '123'
+
+            $result.Version | Should -Be 1
+
+            $result.Hash | Should -Be ('NOTAREALHASH')
         }
 
-        It 'succeeds' `
+        It 'accepts pipeline input' `
         {
-            $mockPageId = '0123456789'
+            $result = $defaultMockManifest | New-Page `
+                                          -Host 'confluence.contoso.com' `
+                                          -Space $defaultMockSpaceName `
+                                          -Title $defaultMockTitle `
+                                          -Index $mockIndex
 
-            $mockPageMeta = @{
-                'Title' = 'foobar'
+            $result | Should -Be $defaultMockPageMeta
+
+            $result.Id | Should -Be '123'
+
+            $result.Version | Should -Be 1
+
+            $result.Hash | Should -Be ('NOTAREALHASH')
+        }
+    }
+
+    Context 'single page publishing (page title provided)' `
+    {
+        BeforeEach `
+        {
+            $secondaryMockPageMeta = @{
+                'Title' = 'foobar2'
                 'Ref' = 'pages/320okffs.xml'
-                'Id' = $mockPageId
-                'Version' = 3
+            }
+
+            $mockManifest = @(
+                $defaultMockPageMeta,
+                $secondaryMockPageMeta
+            )
+
+            $mockIndex = @{
+                $defaultMockTitle = 0
+                'foobar2' = 1
+            }
+        }
+
+        It 'expands unary array to first item' `
+        {
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Manifest $mockManifest `
+                          -Index $mockIndex
+
+            $result.Count | Should -Be 1
+
+            $result | Should -Be $defaultMockPageMeta
+
+            $result.Id | Should -Be '123'
+
+            $result.Version | Should -Be 1
+
+            $result.Hash | Should -Be ('NOTAREALHASH')
+        }
+
+        It 'expands unary array to second item' `
+        {
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title 'foobar2' `
+                          -Manifest $mockManifest `
+                          -Index $mockIndex
+
+            $result | Should -Be $secondaryMockPageMeta
+
+            $result.Count | Should -Be 1
+
+            $result.Id | Should -Be '123'
+
+            $result.Version | Should -Be 1
+
+            $result.Hash | Should -Be ('NOTAREALHASH')
+        }
+    }
+
+    Context 'reference' `
+    {
+        BeforeEach `
+        {
+            $mockPageMeta = @{
+                'Title' = 'foobar'
             }
 
             $mockManifest = @(
                 $mockPageMeta
             )
 
-            Mock -ModuleName 'Page' Get-PageMeta {
-                $mockPageMeta
+            $mockIndex = @{
+                'foobar' = 0
             }
-
-            Mock -ModuleName 'Page' Invoke-WebRequest {
-                $Uri | Should -Be (
-                    'https://confluence.contoso.com/rest/api/content/' + `
-                    $mockPageId
-                )
-
-                $body_ = $Body | ConvertFrom-JSON
-
-                $body_.type | Should -Be 'page'
-
-                $body_.body.storage.representation | Should -Be 'storage'
-
-                $body_.body.storage.value | Should -Be 'foobar content'
-
-                $body_.space.key | Should -Be 'testitest'
-
-                $body_.title | Should -Be 'foobar'
-
-                $body_.version.number | Should -Be 4
-
-                @{
-                    'Content' = '{"Id": "123", "version": {"number": 4}}'
-                }
-            }
-
-            Update-Page `
-                -Host 'confluence.contoso.com' `
-                -Space 'testitest' `
-                -Title 'foobar' `
-                -Manifest $mockManifest
-
-            $mockPageMeta.Hash | Should -Be 'NOTAREALHASH'
-
-            $mockPageMeta.Version | Should -Be 4
         }
 
-        It 'skips, if hash unchanged' `
+        It 'does not output page metadata, if not strict' `
         {
-            $mockPageId = '0123456789'
 
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Manifest $mockManifest `
+                          -Index $mockIndex
+
+            $result | Should -Be $null
+        }
+
+        It 'throws an error, if strict' `
+        {
+            {
+                $result = New-Page `
+                              -Host 'confluence.contoso.com' `
+                              -Space $defaultMockSpaceName `
+                              -Title $defaultMockTitle `
+                              -Manifest $mockManifest `
+                              -Index $mockIndex
+                              -Strict
+            } | Should -Throw
+        }
+    }
+
+    Context 'already published' `
+    {
+        BeforeEach `
+        {
             $mockPageMeta = @{
-                'Title' = 'foobar'
+                'Title' = $defaultMockTitle
                 'Ref' = 'pages/320okffs.xml'
-                'Id' = $mockPageId
-                'Version' = 3
-                'Hash' = 'NOTAREALHASH'
+                'Id' = '123'
             }
 
             $mockManifest = @(
                 $mockPageMeta
             )
 
-            Mock -ModuleName 'Page' Get-PageMeta {
-                $mockPageMeta
+            $mockIndex = @{
+                $defaultMockTitle = 0
             }
-
-            Update-Page `
-                -Host 'confluence.contoso.com' `
-                -Space 'testitest' `
-                -Title 'mockTitle' `
-                -Manifest $mockManifest
         }
 
-        It 'fails, if page meta has no reference' `
+        It 'skips publishing' `
         {
-            $mockPageId = '0123456789'
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Manifest $mockManifest `
+                          -Index $mockIndex
 
-            $mockPageMeta = @{
-                'Title' = 'foobar'
-                'Id' = $mockPageId
-                'Version' = 3
+            $result | Should -Be $mockPageMeta
+
+            $result.Version | Should -Be $null
+
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Page' `
+                -Exactly `
+                -Times 0
+        }
+    }
+
+    Context 'multi-page publishing' `
+    {
+        BeforeEach `
+        {
+            $secondaryMockPageMeta = @{
+                'Title' = 'foobar2'
+                'Ref' = 'pages/320okffs.xml'
+            }
+
+            $tertiaryMockPageMeta = @{
+                'Title' = 'foobar3'
+                'Ref' = 'pages/320okffs.xml'
             }
 
             $mockManifest = @(
-                $mockPageMeta
+                $defaultMockPageMeta,
+                $secondaryMockPageMeta,
+                $tertiaryMockPageMeta
             )
 
-            Mock -ModuleName 'Page' Get-PageMeta {
-                $mockPageMeta
+            $mockIndex = @{
+                $defaultMockTitle = 0
+                'foobar2' = 1
+                'foobar3' = 2
             }
-
-            {
-                Update-Page `
-                    -Host 'confluence.contoso.com' `
-                    -Space 'testitest' `
-                    -Title 'mockTitle' `
-                    -Manifest $mockManifest
-            } | Should -Throw "no reference to local content for page*"
         }
 
-        It 'fails, if page meta has no id' `
+        It 'handles all pages in manifest' `
         {
-            $mockPageId = '0123456789'
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Manifest $mockManifest `
+                          -Index $mockIndex
 
-            $mockPageMeta = @{
-                'Title' = 'foobar'
-                'Ref' = 'foo/bar'
-            }
+            $result.Count | Should -Be 3
 
-            $mockManifest = @(
-                $mockPageMeta
-            )
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Page' `
+                -Exactly `
+                -Times 3
+        }
 
-            Mock -ModuleName 'Page' Get-PageMeta {
-                $mockPageMeta
-            }
+        It 'returns correct count for single item arrays' `
+        {
+            $result = New-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Manifest $defaultMockManifest `
+                          -Index $mockIndex
 
-            {
-                Update-Page `
-                    -Host 'confluence.contoso.com' `
-                    -Space 'testitest' `
-                    -Title 'mockTitle' `
-                    -Manifest $mockManifest
-            } | Should -Throw "no id for page*"
+            $result.Count | Should -Be 1
+
+            Should -Invoke -CommandName 'Invoke-WebRequest' `
+                -ModuleName 'Page' `
+                -Exactly `
+                -Times 1
         }
     }
 }
