@@ -2,9 +2,8 @@
 $ErrorActionPreference = "Stop"
 
 
-$script:schema = Get-Content (
-    Join-Path -Path  $PSScriptRoot 'schemas' 'manifest.schema.json'
-) | Out-String
+$script:schema = Get-Content `
+    "$PSScriptRoot/schemas/manifest.schema.json" | Out-String
 
 
 function Get-Manifest
@@ -21,6 +20,11 @@ function Get-Manifest
         [Parameter(Mandatory)] [string] $File
     )
 
+    Begin
+    {
+        $basePath = Split-Path $File
+    }
+
     Process
     {
         try
@@ -35,9 +39,59 @@ function Get-Manifest
             $raw = '{"Pages":[], "attachments": []}'
         }
 
-        $raw | Test-JSON -Schema $script:schema | Out-Null
+        If ($PSVersionTable.PSEdition -eq 'Core')
+        {
+            $raw | Test-JSON -Schema $script:schema | Out-Null
+        }
 
-        $raw | ConvertFrom-JSON
+        $manifest = $raw | ConvertFrom-JSON
+
+        ForEach($pageMeta in $manifest.Pages)
+        {
+            # patching to be an absolute path, the inverse function
+            # (Set-Manifest) must check, whether _Ref is set and substitute for
+            # Ref before writing to filesystem
+            If ($pageMeta.Ref)
+            {
+                $pageMeta | Add-Member `
+                                -NotePropertyName '_Ref' `
+                                -NotePropertyValue $pageMeta.Ref `
+                                -Force
+
+                $pageMeta | Add-Member `
+                                -NotePropertyName 'Ref' `
+                                -NotePropertyValue (
+                                     Join-Path $basePath $pageMeta.Ref | Resolve-Path
+                                ) `
+                                -Force
+            }
+        }
+
+        ForEach($attachmentMeta in $manifest.Attachments)
+        {
+            # patching to be an absolute path, the inverse function
+            # (Set-Manifest) must check, whether _Ref is set and substitute for
+            # Ref before writing to filesystem
+            If ($attachmentMeta.Ref)
+            {
+                $attachmentMeta | Add-Member `
+                                -NotePropertyName '_Ref' `
+                                -NotePropertyValue $attachmentMeta.Ref `
+                                -Force
+
+                $attachmentMeta | Add-Member `
+                                -NotePropertyName 'Ref' `
+                                -NotePropertyValue (
+                                     Join-Path $basePath $attachmentMeta.Ref | Resolve-Path
+                                ) `
+                                -Force
+            }
+        }
+    }
+
+    End
+    {
+        $manifest
     }
 }
 
@@ -62,9 +116,38 @@ function Set-Manifest
 
     Process
     {
+        ForEach($pageMeta in $Manifest.Pages)
+        {
+            # patching to be an absolute path, the inverse function
+            # (Set-Manifest) must check, whether _Ref is set and substitute for
+            # Ref before writing to filesystem
+            If ($pageMeta._Ref)
+            {
+                $pageMeta.Ref = $pageMeta._Ref
+
+                $Manifest.Pages.PSObject.Properties.Remove('_Ref')
+            }
+        }
+
+        ForEach($attachmentMeta in $Manifest.Attachments)
+        {
+            # patching to be an absolute path, the inverse function
+            # (Set-Manifest) must check, whether _Ref is set and substitute for
+            # Ref before writing to filesystem
+            If ($attachmentMeta._Ref)
+            {
+                $attachmentMeta.Ref = $attachmentMeta._Ref
+
+                $Manifest.Attachments.PSObject.Properties.Remove('_Ref')
+            }
+        }
+
         $raw = $Manifest | ConvertTo-JSON
 
-        $raw | Test-JSON -Schema $script:schema
+        If ($PSVersionTable.PSEdition -eq 'Core')
+        {
+            $raw | Test-JSON -Schema $script:schema
+        }
 
         if ($Backup)
         {
@@ -136,7 +219,7 @@ function New-AncestralPageGenerationCache {
         {
             $generation = 0
 
-            $pageMeta = $Title ? $Manifest[$Index.$Title] : $pageMeta
+            $pageMeta = If ($Title) {$Manifest[$Index.$Title]} Else {$pageMeta}
 
             $ancestor = $pageMeta.AncestorTitle
 

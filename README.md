@@ -92,6 +92,22 @@ to exist.
 Publish-Page
 ```
 
+## Compatibility
+
+This program is compatible with the following Microsoft PowerShell runtimes:
+
+- Microsoft PowerShell Desktop >=5
+- Microsoft PowerShell Core >=7
+
+## Runtime Dependencies
+
+This program has no runtime dependencies.
+
+On PowerShell Desktop, however, it is necessary to obtain the 
+`Microsoft.PowerShell.Utility` module for JSON schema verification of the 
+manifest. Whether that's possible for PowerShell Desktop; We do not know. 
+Should the aforementioned module not be present, JSON validation is skipped.
+
 ## Debugging
 
 To display debug messages, set 
@@ -108,7 +124,13 @@ Execute `pwsh scripts/analyze.ps1` to do a static code analysis.
 
 ## Testing
 
-This program requires [Pester v5](https://pester.dev/) to execute it's test suite.
+This program requires [Pester](https://pester.dev/) to execute it's test suite.
+
+The test suite aims to be executable under most circumstances. We've been 
+dropping usage of Pester v5 functionalities so that it works with Pester down 
+to version 3, since Pester v3 is available in PowerShell (5) Desktop by default.
+Due to the security mechanisms implemented in PowerShell Desktop, installing the
+Pester v5 module may not be feasible for some.
 
 Execute `pwsh scripts/test.ps1` to run the entire test suite.
 
@@ -116,9 +138,13 @@ Execute `pwsh scripts/test.ps1` to run the entire test suite.
 
 This program does not adhere to Microsoft's Best-Practices of publishing
 PowerShell modules, in the sense of that it does not use the *PowerShellGet*
-module to do so and uses plain `nuget` CLI instead.
+module to do so and uses the plain `nuget` CLI instead.
 
-Execute `pwsh scripts/pack.ps1` to create a nuget package.
+This program requires [nuget
+CLI](https://learn.microsoft.com/en-us/nuget/install-nuget-client-tools). Be
+aware that the `dotnet nuget` CLI may not be sufficient on some platforms.
 
-Execute `pwsh scripts/publish` to publish the nuget package to
+Execute `pwsh scripts/pack.ps1` to create the nuget package.
+
+Execute `pwsh scripts/publish.ps1` to publish the nuget package to
 [PowerShellGallery](https://www.powershellgallery.com).

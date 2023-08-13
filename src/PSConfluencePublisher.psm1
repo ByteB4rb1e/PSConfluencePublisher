@@ -33,3 +33,112 @@
 $ErrorActionPreference = "Stop"
 
 
+function Initialize-Manifest
+{
+    <#
+
+    #>
+    Param(
+        # path of manifest to load
+        [Parameter(Mandatory)] [String] $Path
+    )
+
+    Begin
+    {
+        $literalPath = Resolve-Path -Path $Path
+    }
+
+    Process
+    {
+        Write-Debug 'loading manifest...'
+
+        $manifest = Get-Manifest $literalPath
+
+        Write-Debug 'creating pages manifest index...'
+
+        $pagesManifestIndex = New-PagesManifestIndex -Manifest $manifest.Pages
+
+        Write-Debug 'creating ancestral page generation cache...'
+
+        $ancestralGenerationCache = New-AncestralPageGenerationCache `
+                                        -Manifest $manifest.Pages `
+                                        -Index $pagesManifestIndex
+
+        Write-Debug 'sorting pages manifest...'
+
+        Optimize-PagesManifest `
+            -Manifest $manifest.Pages `
+            -Lo 0 `
+            -Hi ($manifest.Pages.Count - 1) `
+            -GenerationCache $ancestralGenerationCache | Out-Null
+    }
+
+    End
+    {
+        @{
+            'Path' = $literalPath
+            'Manifest' = $manifest
+            'Index' = @{
+                'Pages' = New-PagesManifestIndex `
+                              -Manifest $manifest.Pages
+                'Attachments' = New-AttachmentsManifestIndex `
+                                    -Manifest $manifest.Attachments
+            }
+        } 
+    }
+}
+
+
+function Initialize-Connection
+{
+    Param(
+        [Parameter(Mandatory)] [String]$Host,
+        [Parameter(Mandatory)] [String]$Space,
+        [Parameter(Mandatory)] [String]$PersonalAccessToken
+    )
+
+    Process
+    {
+        Register-PersonalAccessToken `
+            -Host $Host `
+            -Token $PersonalAccessToken | Out-Null
+
+        Test-Connection -Host $Host | Out-Null
+    }
+
+    End
+    {
+        @{
+            'Host' = $Host
+            'Space' = $Space
+        }
+    }
+}
+
+
+function Publish-Pages
+{
+    Param(
+        # connection object created through Initialize-Connection
+        [Parameter(Mandatory)] [Collections.Hashtable]$Connection,
+        # manifest object created through Initialize-Manifest
+        [Parameter(Mandatory)] [PSCustomObject]$Manifest,
+        # 
+        [Parameter()] [Switch]$Strict,
+        # 
+        [Parameter()] [Switch]$Force,
+        # title of page to be published
+        [Parameter()] [String]$Title
+    )
+
+    Process
+    {
+         $Manifest.Manifest.Pages | Publish-Page `
+             -Host $Connection.Host `
+             -Space $Connection.Space `
+             -Title $Title `
+             -Index $Manifest.Index.Pages `
+             -Strict:$Strict `
+             -Force:$Force | Out-Null
+    }
+}

@@ -1,58 +1,5 @@
-#!/usr/bin/env pwsh
+
 $ErrorActionPreference = "Stop"
-
-
-function Get-PageMetaCache
-{
-    <#
-        .SYNOPSIS
-            Get a locally indexed/cached Confluence page id
-
-        .EXAMPLE
-            Get-PageMetaCache `
-                 -Title 'Page Title' `
-                 -Manifest @() `
-                 -Index @{}
-
-        .NOTES
-            To test or not to test, that is the question... Since the
-            `Test-JSON` cmdlet requires serialized JSON, but we are working with
-            the deserialized Hashtable, it's too computationally intense to
-            always test the input upon every call. We therefore only make sure, 
-            that correct data is written to the filesystem. For the rest, each 
-            function is responsible for themself (learned that that's a valid 
-            reflexive pronoun today 🤓).
-
-            This function is lucky to get this note, because it's at the top 💯. 
-            Of course this applies to every function.
-    #>
-    Param(
-        [Parameter(Mandatory)] [string] $Title,
-        [Parameter(Mandatory)] [Array] $Manifest,
-        [Parameter()] [Collections.Hashtable] $Index
-    )
-
-    Process
-    {
-        If ($Index -And $Manifest.Count -gt 0 -And $Manifest[$Index.$Title])
-        {
-            $Manifest[$Index.$Title]
-        }
-
-        Else
-        {
-            For ($i = 0; $i -lt $Manifest.Count; $i += 1)
-            {
-                If ($Manifest[$i].Title -eq $Title)
-                {
-                    $Manifest[$i]
-
-                    break
-                }
-            }
-        }
-    }
-}
 
 
 function Get-PageMeta
@@ -74,127 +21,112 @@ function Get-PageMeta
                  -CacheIndexFile 'confluence-page-cache.json'
     #>
     Param(
+        # Confluence instance hostname
         [Parameter(Mandatory)] [string] $Host,
-        [Parameter(Mandatory)] [string] $Title,
+        # Page title
+        [Parameter()] [string] $Title,
+        # Confluence space id
         [Parameter(Mandatory)] [string] $Space,
-        [Parameter(Mandatory)] [Array] $Manifest,
-        [Parameter()] [Collections.Hashtable] $Index
+        # pages manifest
+        [Parameter(Mandatory, ValueFromPipeline)] [Array] $Manifest,
+        # page metadata index for faster lookup of single page
+        [Parameter()] [Collections.Hashtable] $Index,
+        # force to get metadata from remote
+        [Parameter()] [Switch] $Force = $false,
+        # throw an exception on error
+        [Parameter()] [Switch] $Strict = $true
     )
-
-    Begin
-    {
-         $pageMeta = Get-PageMetaCache `
-             -Title $Title `
-             -Manifest $Manifest `
-             -Index $Index
-    }
 
     Process
     {
-        If ($pageMeta -And $pageMeta.Id)
+        If ($Title -And $Index -And $Manifest[$Index.$Title].Id)
         {
-            $pageMeta
+            $Manifest[$Index.$Title]
 
             return
         }
 
-        $escapedTitle = [Uri]::EscapeDataString($Title)
-
-        #TODO: move this to a separate function
-        $query = "title=${escapedTitle}&spaceKey=${Space}&expand=history"
-
-        Invoke-WebRequest `
-            -Uri "https://${Host}/rest/api/content?$query" `
-            -Method 'Get' `
-            -Headers @{
-                'Authorization' = "Bearer $(Get-PersonalAccessToken $Host)"
-            } `
-            -OutVariable response | Out-Null
-
-        $results = ($response.Content | ConvertFrom-JSON).results
-
-        if ($results.Count -gt 1)
+        ForEach ($pageMeta in $Manifest)
         {
-            throw "more than one result for query: $query"
-        }
+            If ($Title -And $pageMeta.Title -ne $Title) {continue}
 
-        elseif ($results.Count -eq 1) 
-        {
-            Update-PageMeta `
-                -Id $results[0].id `
-                -Version $results[0]._expandable.version `
-                -Title $Title `
-                -Manifest $Manifest
+            If ($pageMeta.Id -And -Not $Force)
+            {
+                Write-Debug "local (cache): $($pageMeta.Title) ($($pageMeta.Id))"
+
+                $pageMeta
+            }
+
+            Else
+            {
+                $escapedTitle = [Uri]::EscapeDataString($pageMeta.Title)
+
+                $query = (
+                    "title=${escapedTitle}&spaceKey=${Space}&expand=version"
+                )
+
+                Invoke-WebRequest `
+                    -Uri "https://${Host}/rest/api/content?$query" `
+                    -Method 'Get' `
+                    -Headers @{
+                        'Authorization' = 'Bearer ' +
+                                          $(Get-PersonalAccessToken $Host)
+                    } `
+                    -OutVariable response | Out-Null
+
+                $results = ($response.Content | ConvertFrom-JSON).results
+
+                If ($results.Count -gt 1)
+                {
+                    $errMsg = "error: more than one result for query: $query"
+
+                    If ($Strict) {throw $errMsg}
+
+                    Write-Host $errMsg
+
+                    $pageMeta
+
+                    continue
+                }
+
+                ElseIf ($results.Count -eq 1) 
+                {
+                    Write-Debug (
+                        "Get-PageMetadata: ``$($pageMeta.Title)``: " +
+                        "updating metadata through remote ($($results[0].id))"
+                    )
+
+                    $pageMeta | Add-Member `
+                                    -NotePropertyName Id `
+                                    -NotePropertyValue $results[0].id `
+                                    -Force
+
+                    $pageMeta | Add-Member `
+                                    -NotePropertyName 'Version' `
+                                    -NotePropertyValue `
+                                        $results[0].version.number `
+                                    -Force
+                }
+
+                Else
+                {
+                    Write-Debug "local: $($pageMeta.Title) (no remote)"
+                }
+
+                If (-Not $pageMeta.Hash)
+                {
+                    $content = Get-Content $pageMeta.Ref | Out-String
+
+                    $hash = (Get-StringHash $content).Hash
+
+                    $pageMeta | Add-Member `
+                                    -NotePropertyName 'Hash' `
+                                    -NotePropertyValue $hash `
+                                    -Force
+                }
+
+                $pageMeta
+            }
         }
     }
 }
-
-
-function Update-PageMeta
-{
-    <#
-        .SYNOPSIS
-            Register a Confluence page's metadata in the local cache
-
-        .DESCRIPTION
-            Synchronizes the locally cached page metadata (in manifest) with the
-            data stored by the Confluence instance. Therefore it is required to
-            supply a page id, since this is the reference linking the locally
-            cached page to a published instance of a page.
-
-        .EXAMPLE
-            Update-PageMeta `
-                -Title 'foobar' `
-                -PageId 'pageId' `
-                -Version 9001 `
-                -AncestorTitle 'ancestorTitle' `
-                -Hash 'hash' `
-                -Manifest $mockManifest
-    #>
-    Param(
-        [Parameter(Mandatory)] [String] $Title,
-        # remote Confluence page instance id
-        [Parameter(Mandatory)] [String] $Id,
-        [Parameter()] [Int] $Version,
-        [Parameter()] [String] $AncestorTitle,
-        [Parameter()] [String] $Hash,
-        [Parameter(Mandatory)] [Array] $Manifest,
-        [Parameter()] [Collections.Hashtable] $Index
-    )
-
-    Process
-    {
-        $pageMeta = Get-PageMetaCache `
-                        -Title $Title `
-                        -Manifest $Manifest `
-                        -Index $Index
-
-        If (-Not $pageMeta)
-        {
-            throw "page titled `$Title` not indexed in Manifest."
-        }
-
-        $pageMeta.Id = $Id
-
-        If ($Version)
-        {
-            $pageMeta.Version = $Version
-        }
-
-        If ($AncestorTitle)
-        {
-            $pageMeta.AncestorTitle = $AncestorTitle
-        }
-
-        # if content didn't update, hash stays the same
-        If ($Hash)
-        {
-            $pageMeta.Hash = $Hash
-        }
-
-        Write-Debug "register: $Title -> $PageId"
-
-        $pageMeta
-    }
-}
-
