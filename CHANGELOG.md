@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-nothing as of yet
+### Added
+
+- support for advanced title filter, which supports an array of titles instead
+  of a single title
+- checksum of pages that also regards ancestry.
+- state object to track wether pages or attachments were actually published and
+  manifest may not have to be written back to the filesystem
+- support for non-default Base URIs
 
 ## [1.0.0] - 2023-08-07
 
