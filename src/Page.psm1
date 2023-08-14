@@ -38,7 +38,7 @@ function New-Page
         # title of page to be published
         [Parameter()] [string]$Title,
         # pages manifest
-        [Parameter(Mandatory)] 
+        [Parameter(Mandatory,ValueFromPipeline)] 
             [PSCustomObject[]]$Manifest,
         # pages manifest index, mandatory for ancestor lookup
         [Parameter(Mandatory)] [Collections.Hashtable]$Index,
@@ -123,7 +123,34 @@ function New-Page
                             'representation' = 'storage'
                         }
                     }
-                } | ConvertTo-JSON -Depth 5
+                }
+
+                If ($pageMeta.AncestorTitle)
+                {
+                    $ancestorPageMeta =  $Manifest[
+                        $Index."$($pageMeta.AncestorTitle)"
+                    ]
+
+                    If (-Not $ancestorPageMeta)
+                    {
+                        Throw (
+                            "ancestor (``$($ancestorPageMeta.Title)``) of " +
+                            "``$($pageMeta.Title)`` does not have an id. " +
+                            "This indicates, that the ancestor has not been " +
+                            "published and therefore the pages manifest may " +
+                            "not be in the correct order."
+                        )
+                    }
+
+                    $transportBody.ancestors = @(
+                        @{'id' = $ancestorPageMeta.Id}
+                    )
+                }
+
+                $rawTransportBody = (
+                    $transportBody | ConvertTo-JSON `
+                                         -WarningAction 'SilentlyContinue'
+                )
 
                 Try
                 {
@@ -134,7 +161,7 @@ function New-Page
                             'Authorization' = "Bearer $pat"
                         } `
                         -ContentType "application/json" `
-                        -Body $transportBody `
+                        -Body $rawTransportBody `
                         -OutVariable rawResponse | Out-Null
                 }
 
@@ -277,6 +304,8 @@ function Update-Page
 
                 Write-Host $errMsg
 
+                $pageMeta
+
                 continue
             }
 
@@ -351,7 +380,34 @@ function Update-Page
                     'version' = @{
                         'number' = $version
                     }
-                } | ConvertTo-JSON -WarningAction 'SilentlyContinue'
+                } 
+
+                If ($pageMeta.AncestorTitle)
+                {
+                    $ancestorPageMeta = $Manifest[
+                        $Index."$($pageMeta.AncestorTitle)"
+                    ]
+
+                    If (-Not $ancestorPageMeta)
+                    {
+                        Throw (
+                            "ancestor (``$($ancestorPageMeta.Title)``) of " +
+                            "``$($pageMeta.Title)`` does not have an id. " +
+                            "This indicates, that the ancestor has not been " +
+                            "published and therefore the pages manifest may " +
+                            "not be in the correct order."
+                        )
+                    }
+
+                    $transportBody.ancestors = @(
+                        @{'id' = $ancestorPageMeta.Id}
+                    )
+                }
+
+                $rawTransportBody = (
+                    $transportBody | ConvertTo-JSON `
+                                         -WarningAction 'SilentlyContinue'
+                )
 
                 Try
                 {
@@ -363,7 +419,7 @@ function Update-Page
                             'Authorization' = "Bearer $pat"
                         } `
                         -ContentType "application/json" `
-                        -Body $transportBody `
+                        -Body $rawTransportBody `
                         -OutVariable rawResponse | Out-Null
                 }
 
@@ -430,7 +486,7 @@ function Publish-Page
         # title of page to be published
         [Parameter()] [string]$Title,
         # pages manifest
-        [Parameter(Mandatory, ValueFromPipeline)] 
+        [Parameter(Mandatory)] 
             [PSCustomObject[]]$Manifest,
         # pages manifest index, mandatory for ancestor lookup
         [Parameter(Mandatory)] [Collections.Hashtable]$Index,

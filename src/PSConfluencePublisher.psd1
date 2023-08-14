@@ -64,7 +64,8 @@ Description = 'External Confluence publisher for xconfluencebuilder'
      'Connection.psm1',
      'Manifest.psm1',
      'Page.psm1',
-     'PageMeta.psm1',
+     'Meta.psm1',
+     'Attachment.psm1',
      'StringHelper.psm1'
 )
 
