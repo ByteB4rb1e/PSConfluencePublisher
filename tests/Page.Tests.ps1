@@ -56,7 +56,9 @@ Describe 'New-Page' `
 
             $body_.body.storage.representation | Should -Be 'storage'
 
-            $body_.body.storage.value | Should -Be $defaultMockContent
+            $body_.body.storage.value | Should -Be (
+                $defaultMockContent | Out-String
+            )
 
             $body_.space.key | Should -Be $defaultMockSpaceName
 
@@ -249,7 +251,9 @@ Describe 'New-Page' `
 
             $result | Should -Be $mockPageMeta
 
-            $result.Version | Should -Be $null
+            (
+                $result | Get-Member -Name 'Version'
+            ) | Should -Be $null
 
             Should -Invoke -CommandName 'Invoke-WebRequest' `
                 -ModuleName 'Page' `
@@ -315,6 +319,150 @@ Describe 'New-Page' `
                 -ModuleName 'Page' `
                 -Exactly `
                 -Times 1
+        }
+    }
+}
+
+
+Describe 'Update-Page' `
+{
+    BeforeEach `
+    {
+        $defaultMockContent = 'foobar content'
+
+        $defaultMockSpaceName = 'testitest'
+
+        $defaultMockTitle = 'foobar'
+
+        $defaultMockPageMeta = @{
+            'Title' = $defaultMockTitle
+            'Ref' = 'pages/320okffs.xml'
+            'Id' = 123
+            'Version' = 2
+        }
+
+        $defaultMockManifest = @(
+            $defaultMockPageMeta
+        )
+
+        $mockIndex = @{
+            $defaultMockTitle = 0
+        }
+
+        Mock -ModuleName 'Page' Get-Content {
+            $defaultMockContent
+        }
+
+        Mock -ModuleName 'Page' Get-PersonalAccessToken {
+            '01234567890123456789'
+        }
+
+        # TODO: write proper parameter filters, so that we can reuse this
+        # mock with more thorough/deep assertions on properties
+        Mock -ModuleName 'Page' Invoke-WebRequest {
+            # $Uri | Should -Be 'https://confluence.contoso.com/rest/api/content'
+
+            $body_ = $Body | ConvertFrom-JSON
+
+            $body_.type | Should -Be 'page'
+
+            $body_.body.storage.representation | Should -Be 'storage'
+
+            $body_.body.storage.value | Should -Be (
+                $defaultMockContent | Out-String
+            )
+
+            $body_.space.key | Should -Be $defaultMockSpaceName
+
+            # $body_.title | Should -Be $defaultMockTitle
+
+            @{
+                'Content' = 'DONT CARE ABOUT THE RESPONSE CONTENT'
+            }
+        }
+
+        Mock -ModuleName 'Page' Get-StringHash {
+            @{
+                'Hash' = 'NOTAREALHASH'
+            }
+        }
+    }
+
+    Context 'default' `
+    {
+        It 'accepts parameterized input' -Tag Now `
+        {
+            $result = Update-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Manifest $defaultMockManifest `
+                          -Index $mockIndex
+
+            $result | Should -Be $defaultMockPageMeta
+        }
+
+        It 'accepts pipeline input' `
+        {
+            $result = $defaultMockManifest | Update-Page `
+                                          -Host 'confluence.contoso.com' `
+                                          -Space $defaultMockSpaceName `
+                                          -Title $defaultMockTitle `
+                                          -Index $mockIndex
+
+            $result | Should -Be $defaultMockPageMeta
+        }
+    }
+}
+
+
+Describe 'Publish-Page' `
+{
+    BeforeEach `
+    {
+        $defaultMockSpaceName = 'foobar-space'
+
+        $defaultMockTitle = 'foobar'
+
+        $defaultMockManifest = @(
+            @{},
+            @{},
+            @{}
+        )
+
+        $defaultMockIndex = @{}
+
+        Mock -ModuleName 'Page' New-Page {
+            $defaultMockManifest
+        }
+
+        Mock -ModuleName 'Page' Update-Page {
+            $defaultMockManifest
+        }
+    }
+
+    Context 'default' -Tag 'Now' `
+    {
+        It 'passes everything properly' `
+        {
+            $result = Publish-Page `
+                          -Host 'confluence.contoso.com' `
+                          -Space $defaultMockSpaceName `
+                          -Title $defaultMockTitle `
+                          -Index $defaultMockIndex `
+                          -Manifest $defaultMockManifest
+
+            $result | Should -Be $defaultMockManifest
+
+            Should -Invoke -CommandName 'New-Page' `
+                -ModuleName 'Page' `
+                -Exactly `
+                -Times 1 `
+
+            Should -Invoke -CommandName 'Update-Page' `
+                -ModuleName 'Page' `
+                -Exactly `
+                -Times 1 `
         }
     }
 }

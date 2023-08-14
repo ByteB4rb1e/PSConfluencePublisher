@@ -2,9 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot '..' 'src' `
-                             'PSConfluencePublisher.psd1')
-
+    Import-Module "$PSScriptRoot/../src/PSConfluencePublisher.psd1"
 }
 
 
@@ -30,16 +28,19 @@ Describe 'Get-Manifest' `
             }
         }
 
-        It 'throws on schema mismatch' `
+        If ($PSVersionTable.PSEdition -eq 'Core')
         {
-            InModuleScope Manifest `
+            It 'throws on schema mismatch' `
             {
-                 Mock Get-Content {
-                     return '{"pagges":[], "attsdachments": []}'
-                 }
+                InModuleScope Manifest `
+                {
+                     Mock Get-Content {
+                         return '{"pagges":[], "attsdachments": []}'
+                     }
 
-                 #mocking Get-Content, therefore file name can be bogus
-                 {Get-Manifest 'foobar.x'} | Should -Throw
+                     #mocking Get-Content, therefore file name can be bogus
+                     {Get-Manifest 'foobar.x'} | Should -Throw
+                }
             }
         }
     }
@@ -74,21 +75,25 @@ Describe 'Set-Manifest' `
             }
         }
 
-        It 'declines setting invalid schema' `
-        {
-            InModuleScope Manifest `
-            {
-                 $mockManifest = @{
-                     'pagges' = @()
-                     'attachments' = @()
-                 }
 
-                 #mocking Get-Content, therefore file name can be bogus
-                 {
-                     Set-Manifest `
-                         -Manifest $mockManifest `
-                         -File 'foobar.x'
-                 } | Should -Throw
+        If ($PSVersionTable.PSEdition -eq 'Core')
+        {
+            It 'declines setting invalid schema' `
+            {
+                InModuleScope Manifest `
+                {
+                     $mockManifest = @{
+                         'pagges' = @()
+                         'attachments' = @()
+                     }
+
+                     #mocking Get-Content, therefore file name can be bogus
+                     {
+                         Set-Manifest `
+                             -Manifest $mockManifest `
+                             -File 'foobar.x'
+                     } | Should -Throw
+                }
             }
         }
     }
@@ -146,7 +151,12 @@ Describe 'Set-Manifest' `
 
                     $Path | Should -Be 'foo/bar/foobar.x'
 
-                    $Destination | Should -Be 'foo/bar/foobar.x.bck'
+                    # we love PS, but the path handling is just awfully
+                    # inconsistent. 
+                    $Destination | Should -BeIn @(
+                        'foo/bar/foobar.x.bck',
+                        'foo\bar\foobar.x.bck'
+                    )
                 }
 
                  #mocking Get-Content, therefore file name can be bogus

@@ -2,80 +2,46 @@
 $ErrorActionPreference = "Stop"
 
 BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot '..' 'src' `
-                             'PSConfluencePublisher.psd1')
-
-}
-
-
-Describe 'Get-PageMetaCache' `
-{
-    Context 'default' `
-    {
-        It 'uses index' `
-        {
-            $mockPageMeta = @{
-               'Title' = 'foobar'
-            }
-
-            $mockManifest = @(
-                $mockPageMeta
-            )
-
-            $mockIndex = @{
-                'foobar' = 0
-            }
-
-            $meta = Get-PageMetaCache `
-                        -Title 'foobar' `
-                        -Manifest $mockManifest `
-                        -Index $mockIndex
-
-            $meta | Should -Be $mockPageMeta
-        }
-
-        It 'returns page meta when title exists' `
-        {
-            $mockPageMeta = @{
-               'Title' = 'foobar'
-            }
-
-            $mockManifest = @(
-                $mockPageMeta
-            )
-
-            $meta = Get-PageMetaCache `
-                        -Title 'foobar' `
-                        -Manifest $mockManifest
-
-            $meta | Should -Be $mockPageMeta
-        }
-
-        It 'returns null, if page with supplied title does not exist' `
-        {
-            $mockManifest = @(
-                @{}
-            )
-
-            $meta = Get-PageMetaCache `
-                        -Title 'foobar' `
-                        -Manifest $mockManifest
-
-            $meta | Should -Be $null
-        }
-    }
+    Import-Module "$PSScriptRoot/../src/PSConfluencePublisher.psd1"
 }
 
 
 Describe 'Get-PageMeta' `
 {
+    BeforeAll `
+    {
+        Mock -ModuleName 'PageMeta' Get-PersonalAccessToken {
+            '012345678901234567890'
+        }
+    }
+
     Context 'default' `
     {
-        BeforeAll `
+
+        It 'uses index' `
         {
-            Mock -ModuleName 'PageMeta' Get-PersonalAccessToken {
-                '012345678901234567890'
+            $mockPageMeta = @{
+                'Title' = 'foobar'
+                'Id' = '0123456789'
             }
+
+            $mockManifest = @(
+                @{},
+                $mockPageMeta
+            )
+
+            $mockIndex = @{
+                'foobar' = 1
+            }
+
+            $meta = Get-PageMeta `
+                        -Host 'foobar' `
+                        -Title 'foobar' `
+                        -Space 'foobar' `
+                        -Index $mockIndex `
+                        -Manifest $mockManifest
+
+            $meta | Should -Be $mockPageMeta
         }
 
         It 'returns cache when page id present' `
@@ -89,10 +55,6 @@ Describe 'Get-PageMeta' `
                 $mockPageMeta
             )
 
-            Mock -ModuleName 'PageMeta' Get-PageMetaCache {
-                $mockPageMeta
-            }
-
             $meta = Get-PageMeta `
                         -Host 'foobar' `
                         -Title 'foobar' `
@@ -100,159 +62,124 @@ Describe 'Get-PageMeta' `
                         -Manifest $mockManifest
 
             $meta | Should -Be $mockPageMeta
-
-            Should -Invoke -CommandName 'Get-PageMetaCache' `
-                -ModuleName 'PageMeta' `
-                -Exact `
-                -Times 1
-        }
-
-        It 'gets a page id remotely if there is exactly one result' `
-        {
-            $mockPageMeta = @{
-                'Version' = 'version'
-                'Hash' = 'hash'
-                'Ref' = 'ref'
-            }
-
-            Mock -ModuleName 'PageMeta' Get-PageMetaCache {
-                $mockPageMeta
-            }
-
-            Mock -ModuleName 'PageMeta' Update-PageMeta {
-                $Id | Should -Be '123'
-
-                $Version | Should -Be 9
-
-                $Title | Should -Be 'foobar'
-
-                $mockPageMeta
-            }
-
-            Mock -ModuleName 'PageMeta' Invoke-WebRequest {
-                @{
-                    'Content' = '{"results": [{"id": "123","_expandable":{"version": 9}}]}'
-                }
-            }
-
-            $meta = Get-PageMeta `
-                        -Host 'confluence.contoso.com' `
-                        -Title 'foobar' `
-                        -Space 'foobar' `
-                        -Manifest @{'Pages'= {}}
-
-            $meta | Should -Be $mockPageMeta
-
-            Should -Invoke 'Get-PageMetaCache' `
-                -ModuleName 'PageMeta' `
-                -Exactly `
-                -Times 1
-
-            Should -Invoke 'Invoke-WebRequest' `
-                -ModuleName 'PageMeta' `
-                -Exactly `
-                -Times 1
-
-            Should -Invoke 'Update-PageMeta' `
-                -ModuleName 'PageMeta' `
-                -Exactly `
-                -Times 1
-        }
-
-        It 'throws an exception, if there is more than one result' `
-        {
-            Mock -ModuleName 'PageMeta' Invoke-WebRequest {
-                @{
-                    'Content' = '{"results": [{}, {}]}'
-                }
-            }
-
-            {
-                Get-PageMeta `
-                    -Host 'confluence.contoso.com' `
-                    -Title 'foobar' `
-                    -Space 'foobar' `
-                    -Manifest @{'Pages'= {}}
-            } | Should -Throw 'more than one result for query*'
-        }
-
-        It 'throws an exception, if there is no result' `
-        {
-            Mock -ModuleName 'PageMeta' Invoke-WebRequest {
-                @{
-                    'Content' = '{"results": []}'
-                }
-            }
-
-            $result = Get-PageMeta `
-                          -Host 'confluence.contoso.com' `
-                          -Title 'foobar' `
-                          -Space 'foobar' `
-                          -Manifest @{'Pages'= {}}
-
-            $result | Should -Be $null
         }
     }
-}
 
-
-Describe 'Update-PageMeta' `
-{
-    Context 'default' `
+    Context 'locally cached' `
     {
-        It 'fails, if page meta index does not exist' `
+        BeforeAll `
         {
-            {
-                Update-PageMeta `
-                    -Id '0123456789' `
-                    -Title 'foobar' `
-                    -Manifest @{} 
-            } | Should -Throw
+            $mockManifest = @(
+                @{
+                    'Title' = 'page0'
+                    'Id' = 'id0'
+                },
+                @{
+                    'Title' = 'page1'
+                    'Id' = 'id1'
+                },
+                @{
+                    'Title' = 'page2'
+                    'Id' = 'id2'
+                }
+            )
         }
 
-        It 'updates minimal' `
+        It 'from parameter' `
         {
-            $mockPageMeta = @{
-                'Title' = 'foobar'
-            }
+            $meta = Get-PageMeta `
+                        -Host 'foobar' `
+                        -Space 'foobar' `
+                        -Manifest $mockManifest
 
-            $mockManifest = @(
-                $mockPageMeta
-            )
-
-            $pageMeta = Update-PageMeta `
-                            -Title 'foobar' `
-                            -Id '0123456789' `
-                            -Manifest $mockManifest
-
-            $mockPageMeta.Id | Should -Be '0123456789'
+            $meta.Count | Should -Be 3
         }
 
-        It 'updates extended' `
+        It 'from pipeline' `
         {
-            $mockPageMeta = @{
-                'Title' = 'foobar'
-            }
+            $meta = $mockManifest | Get-PageMeta `
+                        -Host 'foobar' `
+                        -Space 'foobar'
 
+            $meta.Count | Should -Be 3
+        }
+    }
+
+    Context 'locally cached' `
+    {
+        BeforeAll `
+        {
             $mockManifest = @(
-                $mockPageMeta
+                @{
+                    'Title' = 'page0'
+                    'Id' = 'id0'
+                },
+                @{
+                    'Title' = 'page1'
+                },
+                @{
+                    'Title' = 'page2'
+                    'Id' = 'id2'
+                }
             )
 
-            Update-PageMeta `
-                -Title 'foobar' `
-                -Id 'pageId' `
-                -Version 9001 `
-                -AncestorTitle 'ancestorTitle' `
-                -Hash 'hash' `
-                -Manifest $mockManifest
+            Mock -ModuleName 'PageMeta' Invoke-WebRequest {
+                @{
+                    'Content' = '{"results": [{"id": "remoteid", "_expandable": {"version": 1}}]}'
+                }
+            }
+        }
 
-            $mockPageMeta.Id | Should -Be 'pageId'
+        It 'only gets remote if necesary' `
+        {
+            $meta = Get-PageMeta `
+                        -Host 'foobar' `
+                        -Space 'foobar' `
+                        -Manifest $mockManifest
 
-            $mockPageMeta.Version | Should -Be 9001
+            Should -Invoke -CommandName Invoke-WebRequest `
+                -ModuleName 'PageMeta' `
+                -Exactly `
+                -Times 1
 
-            $mockPageMeta.AncestorTitle | Should -Be 'ancestorTitle'
+            $meta.Count | Should -Be 3
 
-            $mockPageMeta.Hash | Should -Be 'hash'
+            $meta[0].Id | Should -Be 'id0'
+
+            $meta[0].Version | Should -Be $null
+
+            $meta[1].Id | Should -Be 'remoteid'
+
+            $meta[1].Version | Should -Be 1
+        }
+
+        It 'forcefully gets remote' `
+        {
+            $meta = Get-PageMeta `
+                        -Host 'foobar' `
+                        -Space 'foobar' `
+                        -Force `
+                        -Manifest $mockManifest
+
+            Should -Invoke -CommandName Invoke-WebRequest `
+                -ModuleName 'PageMeta' `
+                -Exactly `
+                -Times 3
+
+            $meta.Count | Should -Be 3
+
+            $meta[0].Id | Should -Be 'remoteid'
+
+            $meta[0].Version | Should -Be 1
+
+            $meta[1].Id | Should -Be 'remoteid'
+
+            $meta[1].Version | Should -Be 1
+
+            $meta[2].Id | Should -Be 'remoteid'
+
+            $meta[2].Version | Should -Be 1
         }
     }
 }
+
