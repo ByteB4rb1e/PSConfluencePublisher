@@ -9,10 +9,20 @@
         integration test.
 #>
 Param(
-    [Parameter(Mandatory)] [String] $Hostname,
-    [Parameter(Mandatory)] [String] $Space,
-    [Parameter(Mandatory)] [String] $PersonalAccessToken,
-    [Parameter()] [String] $ManifestFile = "$PSScriptRoot/data/manifest.json"
+    # Confluence instance hostname
+    [Parameter(Mandatory)] [String]$Hostname,
+    # Confluence space id
+    [Parameter(Mandatory)] [String]$Space,
+    # Confluence personal access token
+    [Parameter(Mandatory)] [String]$PersonalAccessToken,
+    # Manifest file location
+    [Parameter()] [String]$ManifestFile = "$PSScriptRoot/data/manifest.json",
+    # flag for forcing update of pages and attachments, should they already
+    # exist
+    [Parameter()] [Switch]$Force,
+    # flag for exiting immediately upon any failure, the default behavior is to
+    # just skip the failure and continue
+    [Parameter()] [Switch]$Strict
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,23 +47,30 @@ $connection = Initialize-Connection `
 
 Write-Host "fetching pages metadata..."
 
-# unidirectionally synchronize all remote metadata to local (in-memory) manifest
+# unidirectionally synchronize all remote metadata to local (in-memory)
+# manifest. If locally cached metadata is sufficient, it will skip getting the
+# data from the remote, unless the -Force switch is specified.
 $manifest.Manifest.Pages = Get-PageMeta `
                                -Host $Hostname `
                                -Manifest $manifest.Manifest.Pages `
                                -Space $Space `
+                               -Force:$Force `
+                               -Strict:$Strict
 
 Write-Host "publishing pages ($($manifest.Manifest.Pages.Count))..."
 
 # publish all pages listed in manifest
 Publish-Pages `
     -Manifest $manifest `
-    -Connection $connection
+    -Connection $connection `
+    -Force:$Force `
+    -Strict:$Strict
 
 Write-Host "fetching attachments metadata..."
 
 # unidirectionally synchronize all remote attachment metadata to local 
-# (in-memory) manifest
+# (in-memory) manifest. If locally cached metadata is sufficient, it will skip 
+# getting the data from the remote, unless the -Force switch is specified.
 $manifest.Manifest.Attachments = Get-AttachmentMeta `
                                      -Host $Hostname `
                                      -Manifest $manifest.Manifest.Attachments `
@@ -61,14 +78,17 @@ $manifest.Manifest.Attachments = Get-AttachmentMeta `
                                      -PagesManifest $manifest.Manifest.Pages `
                                      -PagesIndex $manifest.Index.Pages `
                                      -Space $Space `
-                                     -Force
+                                     -Force:$Force `
+                                     -Strict:$Strict
 
 Write-Host "publishing attachments ($($manifest.Manifest.Attachments.Count))..."
 
 # publish all pages listed in manifest
 Publish-Attachments `
     -Manifest $manifest `
-    -Connection $connection
+    -Connection $connection `
+    -Force:$Force `
+    -Strict:$Strict
 
 Write-Host "dumping manifest to filesystem..."
 
