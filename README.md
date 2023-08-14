@@ -31,7 +31,7 @@ interchange with the original manifest producer system
 ## Usage
 
 You may install this PowerShell module via
-[PowerShellGallery](https://www.powershellgallery.com).
+[PowerShellGallery](https://www.powershellgallery.com/packages/victorykit.PSConfluencePublisher).
 
 ```
 PS > Install-Module victorykit.PSConfluencePublisher
