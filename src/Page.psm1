@@ -78,7 +78,6 @@ function New-Page
 
             ElseIf ($pageMeta.Id)
             {
-
                 Write-Debug (
                     "New-Page: ``$($pageMeta.Title)``: skipping, already " +
                     "published ($($pageMeta.Id))"
@@ -298,11 +297,13 @@ function Update-Page
 
             ElseIf (-Not $pageMeta.Id)
             {
-                $errMsg = "``$($pageMeta.Title)``: unknown page id"
+                $errMsg = (
+                    "Update-Page: ``$($pageMeta.Title)``: unknown page id."
+                )
 
                 If ($Strict) {throw $errMsg}
 
-                Write-Host $errMsg
+                Write-Host "$errMsg Skipping."
 
                 $pageMeta
 
@@ -311,7 +312,10 @@ function Update-Page
 
             ElseIf (-Not $pageMeta.Version)
             {
-                Write-Host "``$($pageMeta.Title)``: unknown (current) version"
+                Write-Host (
+                    "Update-Page: ``$($pageMeta.Title)``: unknown (current) " +
+                    "version. Skipping."
+                )
 
                 $pageMeta
 
@@ -336,7 +340,7 @@ function Update-Page
                     continue
                 }
 
-                $version = [Int]($pageMeta.Version) + 1
+                $version = [Int]$pageMeta.Version + 1
 
                 $contentHash = (Get-StringHash $content).Hash
 
@@ -358,7 +362,9 @@ function Update-Page
 
                 Else
                 {
-                    Write-Host "``$($pageMeta.Title)``: updating"
+                    Write-Host (
+                        "Update-Page: ``$($pageMeta.Title)``: updating"
+                    )
                 }
 
                 # status needs to be set as to restore the page, if it is
