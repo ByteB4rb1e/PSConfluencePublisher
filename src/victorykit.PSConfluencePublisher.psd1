@@ -3,7 +3,7 @@
 # Script module or binary module file associated with this manifest.
 #RootModule = 'ConfluencePublisher.psm1'
 
-ModuleVersion = '1.0.1'
+ModuleVersion = '1.0.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
