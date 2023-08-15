@@ -48,7 +48,7 @@ PS> git clone git@bitbucket.org:victorykit/psconfluencepublisher.git
 
 ```
 PS> # universal import statement compatible with PowerShell Core & Desktop
-PS> Import-Module "src/PSConfluencePublisher.psd1"
+PS> Import-Module "src/victorykit.PSConfluencePublisher.psd1"
 ```
 
 An implementation reference is provided through `samples/default`.
