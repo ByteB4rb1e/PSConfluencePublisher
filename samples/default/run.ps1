@@ -28,7 +28,7 @@ Param(
 $ErrorActionPreference = "Stop"
 $DebugPreference = 'Continue'
 
-Import-Module "$PSScriptRoot/../../src/PSConfluencePublisher.psd1"
+Import-Module "$PSScriptRoot/../../src/victorykit.PSConfluencePublisher.psd1"
 
 Write-Host "initializing manifest..."
 
