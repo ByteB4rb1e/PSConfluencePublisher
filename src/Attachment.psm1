@@ -71,7 +71,7 @@ function New-Attachment
             If (-Not $containerPageMeta)
             {
                 throw (
-                    "Get-AttachmentMeta: ``$($attachmentMeta.Name)``: " + 
+                    "New-Attachment: ``$($attachmentMeta.Name)``: " + 
                     "unable to lookup metadata for container page " +
                     "title ``$($attachmentMeta.ContainerPageTitle)``." +
                     "This is fatal."
@@ -81,7 +81,7 @@ function New-Attachment
             If (-Not $containerPageMeta.Id)
             {
                 $errMsg = (
-                    "Get-AttachmentMeta: ``$($attachmentMeta.Name)``: " + 
+                    "New-Attachment: ``$($attachmentMeta.Name)``: " + 
                     "container page titled" +
                     "``$($attachmentMeta.ContainerPageTitle)`` " + 
                     "has no id, which means that the page has " +
@@ -320,7 +320,7 @@ function Update-Attachment
             If (-Not $containerPageMeta)
             {
                 throw (
-                    "Get-AttachmentMeta: ``$($attachmentMeta.Name)``: " + 
+                    "Update-Attachment: ``$($attachmentMeta.Name)``: " + 
                     "unable to lookup metadata for container page " +
                     "title ``$($attachmentMeta.ContainerPageTitle)``." +
                     "This is fatal."
@@ -330,7 +330,7 @@ function Update-Attachment
             ElseIf (-Not $containerPageMeta.Id)
             {
                 $errMsg = (
-                    "Get-AttachmentMeta: ``$($attachmentMeta.Name)``: " + 
+                    "Update-Attachment: ``$($attachmentMeta.Name)``: " + 
                     "container page titled" +
                     "``$($attachmentMeta.ContainerPageTitle)`` " + 
                     "has no id, which means that the page has " +
