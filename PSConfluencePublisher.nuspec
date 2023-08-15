@@ -3,7 +3,7 @@
     <metadata>
         <id>victorykit.PSConfluencePublisher</id>
         <title>PSConfluencePublisher</title>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description> Standalone Atlassian Confluence publisher component for the
         victorykit-xconfluencebuilder Sphinx extension, which is a (temporary ) 
